@@ -15,14 +15,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * In-memory cache service for all metadata types and relationships loaded from Neo4j.
- *
+ * <p>
  * On application startup, this service queries the Neo4j metadata graph and populates
  * concurrent hash maps with all MetaTypes and MetaRelationships. This cache is never
  * persisted to PostgreSQL and serves as the schema definition for all entity validation.
- *
+ * <p>
  * The cache can be reloaded on demand via the reload() method for hot-updates without
  * restarting the application.
- *
+ * <p>
  * Sample Neo4j Cypher Query:
  * MATCH (t:MetaType)-[:HAS_ATTRIBUTE]->(a:MetaAttribute)
  * RETURN t.name AS typeName,

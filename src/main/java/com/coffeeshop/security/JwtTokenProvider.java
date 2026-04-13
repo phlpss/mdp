@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * JWT token provider for generating and validating HS256 signed tokens.
- *
+ * <p>
  * Tokens include claims for:
  * - userId: UUID of the authenticated user
  * - username: username of the user

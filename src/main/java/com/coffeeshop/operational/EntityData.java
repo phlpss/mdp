@@ -19,11 +19,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * JPA entity representing any domain entity in the system using a generic schema.
- *
+ * <p>
  * The metadata-driven architecture stores all operational data in this single table.
  * The 'type' field identifies the entity type (e.g., "Employee", "Transaction"),
  * and the 'payload' JSON field contains all attributes specific to that type.
- *
+ * <p>
  * Validation against the MetaType schema is performed by ValidationEngineService
  * before persistence.
  */

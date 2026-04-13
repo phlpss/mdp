@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Validation engine implementing the Interpreter pattern for schema validation.
- *
+ * <p>
  * This service validates entity payloads against their MetaType schema loaded from Neo4j.
  * It performs comprehensive validation including:
  * - Mandatory field checking
@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
  * - Range constraints (min/max)
  * - ENUM value validation
  * - Referential integrity for relationships
- *
+ * <p>
  * All validation errors are collected (not short-circuiting) to provide comprehensive
  * feedback to the caller.
  */
@@ -202,7 +202,7 @@ public class ValidationEngineService {
      * Validates referential integrity for relationships.
      * If a field corresponds to a MetaRelationship target, verifies that the referenced
      * entity exists in PostgreSQL and is of the correct type.
-     *
+     * <p>
      * Example: For a Transaction entity with processedByEmployeeId field referencing
      * an Employee, this method ensures the referenced Employee actually exists.
      */

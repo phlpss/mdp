@@ -5,15 +5,15 @@ import org.springframework.stereotype.Component;
 
 /**
  * Placeholder component for consuming BigQuery events published by PubSubPublisherService.
- *
+ * <p>
  * In production, this logic would be implemented as a Cloud Function or Dataflow pipeline
  * that consumes from the Pub/Sub topic and streams events to BigQuery ML for:
  * - Anomaly detection (UC-AI2: Daily closing discrepancy analysis)
  * - Forecasting (UC-AI3: Revenue forecasting)
  * - Analytics dashboards
- *
+ * <p>
  * For now, this component serves as documentation and a placeholder for future implementation.
- *
+ * <p>
  * TODO: Replace with actual Cloud Function deployment or Dataflow pipeline definition.
  */
 @Slf4j

@@ -2,13 +2,13 @@ package com.coffeeshop.metadata;
 
 /**
  * Immutable record representing a relationship between two entity types in the metadata graph.
- *
+ * <p>
  * Example: A MetaRelationship might describe:
  *   name: "PROCESSED_BY"
  *   fromType: "Transaction"
  *   toType: "Employee"
  *   mandatory: false
- *
+ * <p>
  * This indicates that a Transaction entity may have a field referencing an Employee ID.
  * The mandatory flag enforces referential integrity if true.
  */

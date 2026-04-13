@@ -4,10 +4,10 @@ import java.util.List;
 
 /**
  * Immutable record representing a domain entity type in the metadata schema.
- *
+ * <p>
  * Each MetaType defines the structure and validation rules for all entities of that type.
  * Example: MetaType named "Employee" with attributes (id, firstName, lastName, salary, etc.)
- *
+ * <p>
  * sensitiveFields are masked based on the caller's role and permissions.
  * For example, "Employee" type might have sensitiveFields = ["salary", "ssn"].
  */

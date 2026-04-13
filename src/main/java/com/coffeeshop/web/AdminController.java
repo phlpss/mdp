@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Administrative endpoints for system operations.
- * 
+ * <p>
  * Restricted to IT_SPECIALIST role.
  */
 @Slf4j
@@ -31,10 +31,10 @@ public class AdminController {
 
     /**
      * Reload metadata schema from Neo4j without restarting the application.
-     * 
+     * <p>
      * This endpoint allows IT Specialists to hot-reload the in-memory metadata cache
      * after schema changes have been made in the Neo4j metadata graph.
-     * 
+     * <p>
      * Access: IT_SPECIALIST only
      * 
      * @param caller Authenticated user
@@ -58,7 +58,8 @@ public class AdminController {
             
             var types = metadataCacheService.getAllTypes();
             response.put("typesLoaded", types.size());
-            response.putArray("typeNames").addAll(types.keySet());
+            var typeNamesArray = response.putArray("typeNames");
+            types.keySet().forEach(typeNamesArray::add);
 
             log.info("Metadata reload completed in {} ms. Loaded {} types", durationMs, types.size());
 

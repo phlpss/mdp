@@ -14,7 +14,7 @@ import org.springframework.security.core.userdetails.UserDetails;
  * Custom UserDetails implementation carrying additional claims from JWT:
  * - userId: UUID of the authenticated user
  * - storeLocationId: UUID of the user's assigned store location
- *
+ * <p>
  * Used by Spring Security to represent the authenticated principal throughout the request.
  */
 @Getter

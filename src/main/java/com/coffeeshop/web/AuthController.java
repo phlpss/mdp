@@ -17,9 +17,9 @@ import java.util.*;
 
 /**
  * Authentication controller for JWT token generation.
- *
+ * <p>
  * Provides the public /api/v1/auth/login endpoint for obtaining JWT tokens.
- *
+ * <p>
  * NOTE: This implementation uses hardcoded in-memory users for demonstration.
  * TODO: Replace with EntityData-based user lookup from PostgreSQL in production.
  */
@@ -82,9 +82,9 @@ public class AuthController {
 
     /**
      * Authenticate a user and return a JWT token.
-     *
+     * <p>
      * Request body: { "username": "...", "password": "..." }
-     *
+     * <p>
      * For demonstration purposes, all users share the same password "password".
      * TODO: Implement proper password hashing and EntityData-based user lookup.
      *

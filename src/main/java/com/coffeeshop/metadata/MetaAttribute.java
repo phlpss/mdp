@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Immutable record representing a single attribute in a MetaType schema.
- *
+ * <p>
  * Example: For an Employee MetaType, an attribute might be:
  *   name: "salary"
  *   dataType: "DECIMAL"

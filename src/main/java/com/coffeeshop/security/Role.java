@@ -5,7 +5,7 @@ import lombok.Getter;
 /**
  * Enumeration of all system roles in the metadata-driven coffee shop platform.
  * Organized by hierarchy:
- *
+ * <p>
  * Operational Roles (in-store): BARISTA, WAITER, CASHIER, CLEANER
  * Supervisory Roles: SHIFT_SUPERVISOR, STORE_MANAGER
  * Administrative Roles: HR_MANAGER, ACCOUNTANT, MARKETING
