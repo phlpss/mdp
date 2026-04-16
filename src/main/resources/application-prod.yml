@@ -1,0 +1,5 @@
+coffeeshop:
+  pubsub:
+    enabled: true
+    project-id: ${GCP_PROJECT_ID:local-project}
+    topic-id: ${PUBSUB_TOPIC_ID:coffeeshop-entity-events}

@@ -37,8 +37,7 @@ coffeeshop:
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}  # 24 hours
   
   pubsub:
-    topic-id: ${PUBSUB_TOPIC_ID:coffeeshop-entity-events}
-    project-id: ${GCP_PROJECT_ID:local-project}
+    enabled: false
   
   metadata:
     cache-ttl-minutes: ${METADATA_CACHE_TTL:60}

@@ -10,6 +10,7 @@ import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.TopicName;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
+@Profile("prod")
 public class PubSubPublisherService {
     private final String projectId;
     private final String topicId;
