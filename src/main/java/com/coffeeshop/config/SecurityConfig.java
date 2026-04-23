@@ -37,32 +37,51 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                // Disable CSRF for stateless API
-                .csrf(csrf -> csrf.disable())
+        return http
+                // Disable CSRF for stateless JWT API
+                .csrf(AbstractHttpConfigurer::disable)
+
+                // Disable CORS (or configure properly for production)
+                .cors(AbstractHttpConfigurer::disable)
 
                 // Stateless session management
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
 
-                // Authorization rules
-                .authorizeHttpRequests(authz -> authz.requestMatchers("/api/v1/auth/**").permitAll().requestMatchers("/actuator/health").permitAll().requestMatchers("/actuator/**").permitAll().anyRequest().authenticated())
+                // Authorization rules - ORDER MATTERS!
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .anyRequest().authenticated()
+                )
 
                 // Add JWT filter before UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // Disable form login and HTTP Basic
-                .formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
 
                 // Custom exception handling
-                .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint((request, response, authException) -> {
-                    response.setStatus(401);
-                    response.getWriter().write("{\"error\": \"UNAUTHORIZED\", \"message\": \"" + authException.getMessage() + "\"}");
-                }).accessDeniedHandler((request, response, accessDeniedException) -> {
-                    response.setStatus(403);
-                    response.getWriter().write("{\"error\": \"FORBIDDEN\"}");
-                }));
-
-        return http.build();
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write(
+                                    "{\"error\":\"UNAUTHORIZED\",\"message\":\"" +
+                                            authException.getMessage() + "\"}"
+                            );
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(403);
+                            response.setContentType("application/json");
+                            response.getWriter().write(
+                                    "{\"error\":\"FORBIDDEN\",\"message\":\"Access denied\"}"
+                            );
+                        })
+                )
+                .build();
     }
 
     /**
