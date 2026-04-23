@@ -1,14 +1,17 @@
 package com.coffeeshop.security;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
-import java.util.UUID;
+
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -37,22 +40,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
         try {
             String jwt = extractJwt(request);
 
             if (jwt != null) {
-                DecodedJWT decodedJWT = jwtTokenProvider.validateAndDecode(jwt);
-                UUID userId = jwtTokenProvider.getUserId(decodedJWT);
-                String username = jwtTokenProvider.getUsername(decodedJWT);
+                var decodedJWT = jwtTokenProvider.validateAndDecode(jwt);
+                var userId = jwtTokenProvider.getUserId(decodedJWT);
+                var username = jwtTokenProvider.getUsername(decodedJWT);
                 var roles = jwtTokenProvider.getRoles(decodedJWT);
-                UUID storeLocationId = jwtTokenProvider.getStoreLocationId(decodedJWT);
+                var storeLocationId = jwtTokenProvider.getStoreLocationId(decodedJWT);
 
-                UserPrincipal userPrincipal = new UserPrincipal(userId, username, roles, storeLocationId);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userPrincipal, null,
-                                userPrincipal.getAuthorities());
+                var userPrincipal = new UserPrincipal(userId, username, roles, storeLocationId);
+                var authentication = new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -63,12 +66,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             log.error("Error processing JWT token", e);
         }
-
         filterChain.doFilter(request, response);
     }
 
     /**
-     * Extract JWT token from Authorization header.
+     * Extract the JWT token from the Authorization header.
      * Expected format: "Bearer {token}"
      */
     private String extractJwt(HttpServletRequest request) {
@@ -79,6 +81,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+
+    @Bean
+    public FilterRegistrationBean<JwtAuthFilter> jwtAuthFilterRegistration(JwtAuthFilter filter) {
+        var registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 }
 
