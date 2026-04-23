@@ -1,21 +1,22 @@
 package com.coffeeshop.operational;
 
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import jakarta.persistence.GenerationType;
+import java.time.Instant;
 import java.util.UUID;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * JPA entity representing any domain entity in the system using a generic schema.
@@ -28,37 +29,29 @@ import org.hibernate.annotations.UpdateTimestamp;
  * before persistence.
  */
 @Entity
-@Table(name = "entity_data", indexes = {@Index(name = "idx_entity_data_type", columnList = "type"), @Index(name = "idx_entity_data_created_at", columnList = "created_at DESC"), @Index(name = "idx_entity_data_updated_at", columnList = "updated_at DESC")})
+@Table(name = "entity_data")
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class EntityData {
-
     @Id
-    @Column(columnDefinition = "uuid")
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false, length = 100)
     private String type;
 
-    @Type(JsonBinaryType.class)
-    @Column(columnDefinition = "jsonb", nullable = false)
-    private com.fasterxml.jackson.databind.JsonNode payload;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private JsonNode payload;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
+    @Column(name = "updated_at", nullable = false)
     @UpdateTimestamp
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        if (this.id == null) {
-            this.id = UUID.randomUUID();
-        }
-    }
+    private Instant updatedAt;
 }
 
