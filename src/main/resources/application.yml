@@ -2,12 +2,24 @@ spring:
   application:
     name: coffeeshop-mdp
   
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+      - org.springframework.boot.security.autoconfigure.actuate.web.servlet.ManagementWebSecurityAutoConfiguration
+
+  security:
+    filter:
+      order: 5
+    user:
+      name: disabled
+      password: disabled
+
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/coffeeshop}
     username: ${DATABASE_USER:postgres}
     password: ${DATABASE_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
-  
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -15,21 +27,17 @@ spring:
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.types.print.banner: false
-  
+
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
-  
+
   neo4j:
-    uri: ${NEO4J_URI:bolt://localhost:7687}
+    uri: ${NEO4J_URI:neo4j+s://a7590ddd.databases.neo4j.io}
     authentication:
-      username: ${NEO4J_USER:neo4j}
-      password: ${NEO4J_PASSWORD:password}
-  
-  security:
-    filter:
-      order: 5
+      username: ${NEO4J_USER:a7590ddd}
+      password: ${NEO4J_PASSWORD:ObTDT4noae8Jyi-6rnZN7mo8utB4hT3xywFChhKS5Js}
 
 coffeeshop:
   jwt:
@@ -56,4 +64,5 @@ logging:
     com.coffeeshop: DEBUG
     org.springframework.security: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security.web.FilterChainProxy: TRACE
 
