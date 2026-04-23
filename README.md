@@ -343,8 +343,8 @@ CREATE (txnType:MetaType {name: "Transaction"})
 3. **Build & Run**
 
 ```bash
-mvn clean package
-java -jar target/mdp-0.0.1-SNAPSHOT.jar
+#mvn clean package
+#java -jar target/mdp-0.0.1-SNAPSHOT.jar
 ```
 
 4. **Obtain JWT Token**
