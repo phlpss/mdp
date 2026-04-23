@@ -1,6 +1,5 @@
 package com.coffeeshop.operational;
 
-import com.coffeeshop.analytics.PubSubPublisherService;
 import com.coffeeshop.metadata.MetaType;
 import com.coffeeshop.metadata.MetadataCacheService;
 import com.coffeeshop.security.UserPrincipal;
@@ -31,14 +30,14 @@ public class GenericEntityService {
     private final EntityDataRepository entityDataRepository;
     private final MetadataCacheService metadataCacheService;
     private final ValidationEngineService validationEngineService;
-    private final PubSubPublisherService pubSubPublisherService;
+//    private final PubSubPublisherService pubSubPublisherService;
     private final ObjectMapper objectMapper;
 
-    public GenericEntityService(EntityDataRepository entityDataRepository, MetadataCacheService metadataCacheService, ValidationEngineService validationEngineService, PubSubPublisherService pubSubPublisherService, ObjectMapper objectMapper) {
+    public GenericEntityService(EntityDataRepository entityDataRepository, MetadataCacheService metadataCacheService, ValidationEngineService validationEngineService, ObjectMapper objectMapper) {
         this.entityDataRepository = entityDataRepository;
         this.metadataCacheService = metadataCacheService;
         this.validationEngineService = validationEngineService;
-        this.pubSubPublisherService = pubSubPublisherService;
+//        this.pubSubPublisherService = pubSubPublisherService;
         this.objectMapper = objectMapper;
     }
 
@@ -62,8 +61,8 @@ public class GenericEntityService {
         EntityData saved = entityDataRepository.save(entity);
         log.info("Entity created: type='{}', id='{}'", type, saved.getId());
 
-        // Publish event asynchronously (non-blocking)
-        pubSubPublisherService.publishEntityEvent("CREATED", type, saved.getId(), payload);
+        // todo: Publish event asynchronously (non-blocking)
+//        pubSubPublisherService.publishEntityEvent("CREATED", type, saved.getId(), payload);
 
         // Apply masking before returning
         return applyFieldMask(type, saved, caller);
@@ -133,8 +132,8 @@ public class GenericEntityService {
         EntityData updated = entityDataRepository.save(entity);
         log.info("Entity updated: type='{}', id='{}'", type, id);
 
-        // Publish event asynchronously
-        pubSubPublisherService.publishEntityEvent("UPDATED", type, updated.getId(), payload);
+//        todo
+//        pubSubPublisherService.publishEntityEvent("UPDATED", type, updated.getId(), payload);
 
         // Apply masking before returning
         return applyFieldMask(type, updated, caller);
@@ -158,8 +157,8 @@ public class GenericEntityService {
         entityDataRepository.deleteById(id);
         log.info("Entity deleted: type='{}', id='{}'", type, id);
 
-        // Publish event asynchronously
-        pubSubPublisherService.publishEntityEvent("DELETED", type, id, entity.getPayload());
+//        todo
+//        pubSubPublisherService.publishEntityEvent("DELETED", type, id, entity.getPayload());
     }
 
     /**
