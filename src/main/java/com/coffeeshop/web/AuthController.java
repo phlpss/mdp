@@ -94,9 +94,9 @@ public class AuthController {
      * @return JWT token in response body with 200 status
      */
     @PostMapping("/login")
-    public ResponseEntity<Object> login(@RequestBody JsonNode body) {
-        String username = body.has("username") ? body.get("username").asText() : null;
-        String password = body.has("password") ? body.get("password").asText() : null;
+    public ResponseEntity<Object> login(@RequestBody JsonNode body) { // OK in positive scenario
+        String username = body.has("username") ? body.get("username").asString() : null;
+        String password = body.has("password") ? body.get("password").asString() : null;
 
         log.info("Login attempt: username={}", username);
 
