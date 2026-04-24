@@ -75,10 +75,8 @@
             <version>${spring-cloud-gcp.version}</version>
         </dependency>
 
-        <!-- Jackson for JSON Processing -->
-        <!-- todo: remove dependency -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
 

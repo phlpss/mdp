@@ -2,7 +2,7 @@ package com.coffeeshop.web;
 
 import com.coffeeshop.operational.EntityData;
 import com.coffeeshop.security.UserPrincipal;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

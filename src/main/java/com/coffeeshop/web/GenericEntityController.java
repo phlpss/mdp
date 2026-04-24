@@ -4,7 +4,7 @@ import com.coffeeshop.exception.IdempotencyConflictException;
 import com.coffeeshop.operational.EntityData;
 import com.coffeeshop.operational.GenericEntityService;
 import com.coffeeshop.security.UserPrincipal;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;

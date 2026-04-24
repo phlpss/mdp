@@ -5,8 +5,8 @@ import com.coffeeshop.metadata.MetaAttribute;
 import com.coffeeshop.metadata.MetaType;
 import com.coffeeshop.metadata.MetadataCacheService;
 import com.coffeeshop.operational.EntityDataRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.NullNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.NullNode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -49,8 +49,7 @@ public class ValidationEngineService {
      * @throws ValidationException if validation fails
      */
     public void validate(String type, JsonNode payload) {
-        log.debug("Starting validation for entity type '{}' with payload keys: {}", type,
-                payload.fieldNames().hasNext() ? "present" : "empty");
+        log.debug("Starting validation for entity type '{}'", type);
 
         MetaType metaType = metadataCacheService.getType(type);
         List<String> errors = new ArrayList<>();

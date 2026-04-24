@@ -4,9 +4,9 @@ import com.coffeeshop.metadata.MetaType;
 import com.coffeeshop.metadata.MetadataCacheService;
 import com.coffeeshop.security.UserPrincipal;
 import com.coffeeshop.validation.ValidationEngineService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -206,7 +206,8 @@ public class GenericEntityService {
         masked.setUpdatedAt(entity.getUpdatedAt());
 
         ObjectNode maskedPayload = objectMapper.createObjectNode();
-        entity.getPayload().fields().forEachRemaining(entry -> {
+
+        entity.getPayload().properties().iterator().forEachRemaining(entry -> {
             if (metaType.sensitiveFields().contains(entry.getKey())) {
                 maskedPayload.put(entry.getKey(), "***MASKED***");
             } else {
