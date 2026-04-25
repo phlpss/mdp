@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * In-memory cache service for all metadata types and relationships loaded from Neo4j.
@@ -76,19 +77,96 @@ public class MetadataCacheService {
 
     /**
      * Load all MetaType definitions with their attributes from Neo4j.
+     *
+     * Expected graph structure:
+     *   (:MetaType {name, sensitiveFields})-[:HAS_ATTRIBUTE]->(:MetaAttribute {name, dataType, mandatory, min, max, allowedValues})
      */
     private void loadMetaTypes() {
-        // TODO: Implement Neo4j Cypher query to fetch MetaTypes and attributes
-        // For now, this is a stub that would be populated at runtime
+        String cypher = """
+                MATCH (mt:MetaType)
+                OPTIONAL MATCH (mt)-[:HAS_ATTRIBUTE]->(ma:MetaAttribute)
+                RETURN mt.name AS typeName,
+                       mt.sensitiveFields AS sensitiveFields,
+                       collect({
+                           name:          ma.name,
+                           dataType:      ma.dataType,
+                           mandatory:     ma.mandatory,
+                           min:           ma.min,
+                           max:           ma.max,
+                           allowedValues: ma.allowedValues
+                       }) AS attributes
+                """;
+
+        neo4jClient.query(cypher).fetch().all().forEach(row -> {
+            var typeName = (String) row.get("typeName");
+
+            @SuppressWarnings("unchecked")
+            var sensitiveFields = (List<String>) row.getOrDefault("sensitiveFields", List.of());
+
+            @SuppressWarnings("unchecked")
+            var rawAttrs = (List<Map<String, Object>>) row.getOrDefault("attributes", List.of());
+
+            List<MetaAttribute> attributes = rawAttrs.stream()
+                    .filter(a -> a.get("name") != null)
+                    .map(a -> new MetaAttribute(
+                            (String) a.get("name"),
+                            (String) a.get("dataType"),
+                            Boolean.TRUE.equals(a.get("mandatory")),
+                            toInteger(a.get("min")),
+                            toInteger(a.get("max")),
+                            toStringList(a.get("allowedValues"))))
+                    .toList();
+
+            typeCache.put(typeName, new MetaType(typeName, attributes, sensitiveFields));
+        });
+
         log.debug("Loaded {} MetaTypes from Neo4j", typeCache.size());
+    }
+
+    private static Integer toInteger(Object value) {
+        return switch (value) {
+            case Integer i -> i;
+            case Number n -> n.intValue();
+            case null, default -> null;
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> toStringList(Object value) {
+        if (value == null) return List.of();
+        if (value instanceof List<?> list) return (List<String>) list;
+        return List.of();
     }
 
     /**
      * Load all MetaRelationship definitions from Neo4j.
+     *
+     * Expected graph structure:
+     *   (:MetaRelationship {name, mandatory})-[:FROM_TYPE]->(:MetaType)
+     *   (:MetaRelationship {name, mandatory})-[:TO_TYPE]->(:MetaType)
      */
     private void loadMetaRelationships() {
-        // TODO: Implement Neo4j Cypher query to fetch MetaRelationships
-        // Example: MATCH (from:MetaType)-[rel:RELATIONSHIP]-(to:MetaType)
+        String cypher = """
+                MATCH (from:MetaType)-[r:RELATIONSHIP_DEF]->(to:MetaType)
+                RETURN r.name             AS relName,
+                       from.name          AS fromType,
+                       to.name            AS toType,
+                       r.cardinality      AS cardinality,
+                       r.affects_analytics AS affectsAnalytics
+                """;
+
+        neo4jClient.query(cypher).fetch().all().forEach(row -> {
+            var relName = (String) row.get("relName");
+            var fromType = (String) row.get("fromType");
+            var toType = (String) row.get("toType");
+            var cardinality = (String) row.getOrDefault("cardinality", "");
+
+            var mandatory = cardinality.startsWith("ONE_TO_ONE") || cardinality.startsWith("ONE_TO_MANY");
+            var rel = new MetaRelationship(relName, fromType, toType, mandatory);
+
+            relationshipCache.computeIfAbsent(fromType, k -> new CopyOnWriteArrayList<>()).add(rel);
+        });
+
         log.debug("Loaded {} relationship definitions from Neo4j", relationshipCache.size());
     }
 
@@ -139,4 +217,3 @@ public class MetadataCacheService {
         return Collections.unmodifiableMap(typeCache);
     }
 }
-
