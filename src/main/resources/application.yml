@@ -27,6 +27,7 @@ spring:
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.types.print.banner: false
+      hibernate.type.json_format_mapper: jackson3
 
   flyway:
     enabled: true
