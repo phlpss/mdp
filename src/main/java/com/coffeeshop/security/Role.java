@@ -41,11 +41,6 @@ public enum Role {
         this.value = value;
     }
 
-    // todo: remove later
-    public String getValue() {
-        return value;
-    }
-
     public String getAuthority() {
         return "ROLE_" + value;
     }

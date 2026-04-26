@@ -96,7 +96,7 @@ public class ValidationEngineService {
 
             switch (attr.dataType().toUpperCase()) {
                 case "STRING":
-                    if (!value.isTextual()) {
+                    if (!value.isString()) {
                         errors.add("Field '" + attr.name() + "' must be a string, got " + value.getNodeType());
                     }
                     break;
@@ -120,23 +120,23 @@ public class ValidationEngineService {
                     break;
 
                 case "DATE":
-                    if (!value.isTextual()) {
+                    if (!value.isString()) {
                         errors.add("Field '" + attr.name() + "' must be a string (ISO-8601 date), got " + value.getNodeType());
                     } else {
                         try {
-                            LocalDate.parse(value.asText());
+                            LocalDate.parse(value.asString());
                         } catch (DateTimeParseException e) {
                             errors.add("Field '" + attr.name() + "' must be a valid ISO-8601 date (YYYY-MM-DD), got '" +
-                                    value.asText() + "'");
+                                    value.asString() + "'");
                         }
                     }
                     break;
 
                 case "ENUM":
-                    if (!value.isTextual()) {
+                    if (!value.isString()) {
                         errors.add("Field '" + attr.name() + "' must be a string (ENUM), got " + value.getNodeType());
                     } else if (attr.allowedValues() != null && !attr.allowedValues().isEmpty()) {
-                        String valueStr = value.asText();
+                        String valueStr = value.asString();
                         if (!attr.allowedValues().contains(valueStr)) {
                             errors.add("Field '" + attr.name() + "' has invalid enum value '" + valueStr +
                                     "'. Allowed values: " + attr.allowedValues());
@@ -163,8 +163,8 @@ public class ValidationEngineService {
                 continue;
             }
 
-            if ("STRING".equals(attr.dataType()) && value.isTextual()) {
-                int length = value.asText().length();
+            if ("STRING".equals(attr.dataType()) && value.isString()) {
+                int length = value.asString().length();
                 if (attr.min() != null && length < attr.min()) {
                     errors.add("Field '" + attr.name() + "' length must be at least " + attr.min() +
                             ", got " + length);
