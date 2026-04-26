@@ -52,19 +52,15 @@ public class GenericEntityService {
     public EntityData create(String type, JsonNode payload, UserPrincipal caller) {
         log.info("Creating entity of type '{}' by user: {}", type, caller.getUsername());
 
-        // Validate against schema
         validationEngineService.validate(type, payload);
 
-        // Create entity
-        EntityData entity = EntityData.builder().id(UUID.randomUUID()).type(type).payload(payload).build();
-
+        EntityData entity = EntityData.builder().type(type).payload(payload).build();
         EntityData saved = entityDataRepository.save(entity);
         log.info("Entity created: type='{}', id='{}'", type, saved.getId());
 
         // todo: Publish event asynchronously (non-blocking)
 //        pubSubPublisherService.publishEntityEvent("CREATED", type, saved.getId(), payload);
 
-        // Apply masking before returning
         return applyFieldMask(type, saved, caller);
     }
 

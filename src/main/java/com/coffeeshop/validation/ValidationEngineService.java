@@ -94,7 +94,7 @@ public class ValidationEngineService {
                 continue;
             }
 
-            switch (attr.dataType()) {
+            switch (attr.dataType().toUpperCase()) {
                 case "STRING":
                     if (!value.isTextual()) {
                         errors.add("Field '" + attr.name() + "' must be a string, got " + value.getNodeType());

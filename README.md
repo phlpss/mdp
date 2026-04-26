@@ -1,6 +1,6 @@
 # Metadata-Driven Coffee Shop Management Platform - MDP Bootstrap
 
-A production-grade Spring Boot 3.x backend implementing a "Configuration over Code" architecture for a coffee shop management system.
+A production-grade Spring Boot 4.x backend implementing a "Configuration over Code" architecture for a coffee shop management system.
 
 ## Architecture Overview
 
@@ -16,11 +16,11 @@ This system uses a **metadata-driven, generic data engine** where:
 2. **Metadata-First Validation**: All CRUD operations validate against MetaType schemas
 3. **Asynchronous Analytics**: Pub/Sub events are published non-blocking for BigQuery streaming
 4. **Location-Scoped Authorization**: All operations respect store location boundaries
-5. **Field-Level Masking**: Sensitive fields (e.g., salary) are masked based on caller role
+5. **Field-Level Masking**: Sensitive fields (e.g., salary) are masked based on the caller role
 
 ## Technology Stack
 
-- **Java 17** with Spring Boot 3.x
+- **Java 17** with Spring Boot 4.x
 - **PostgreSQL** with JSONB for entity payloads
 - **Neo4j** for metadata schema definitions
 - **Google Cloud Pub/Sub** for event streaming to BigQuery
@@ -31,6 +31,7 @@ This system uses a **metadata-driven, generic data engine** where:
 ### Critical Dependencies
 
 ```xml
+<!-- OUTDATED - removed dependency -->
 <!-- JSONB Support - Hibernate 6.x (not hibernate-types-60 which targets Hibernate 5) -->
 <io.hypersistence:hypersistence-utils-hibernate-63>3.7.0</io.hypersistence>
 
@@ -38,7 +39,7 @@ This system uses a **metadata-driven, generic data engine** where:
 <com.auth0:java-jwt>4.4.0</com.auth0>
 
 <!-- GCP Pub/Sub -->
-<com.google.cloud:spring-cloud-gcp-starter-pubsub>4.8.1</com.google.cloud>
+<com.google.cloud:spring-cloud-gcp-starter-pubsub>8.0.1</com.google.cloud>
 ```
 
 ## Project Structure
@@ -301,7 +302,7 @@ After any successful write operation, an event is published asynchronously to Go
   "entityType": "Employee",
   "entityId": "00000000-0000-0000-0000-000000000001",
   "timestamp": "2026-04-10T12:34:56Z",
-  "payload": { ... }
+   "payload": {  }
 }
 ```
 
