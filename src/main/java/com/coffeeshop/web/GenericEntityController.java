@@ -29,19 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Generic REST controller for CRUD operations on all entity types.
- *
- * Supports:
- * - Idempotent POST operations via Idempotency-Key header
- * - Pagination and sorting on GET operations
- * - Role-based authorization via @PreAuthorize
- * - Automatic field masking based on caller role
- *
- * Endpoints:
- * - POST   /api/v1/entities/{type}
- * - GET    /api/v1/entities/{type}
- * - GET    /api/v1/entities/{type}/{id}
- * - PUT    /api/v1/entities/{type}/{id}
- * - DELETE /api/v1/entities/{type}/{id}
  */
 @Slf4j
 @RestController

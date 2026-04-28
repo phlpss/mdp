@@ -32,49 +32,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class HrController {
 
     /**
-     * Approve or reject a leave request.
-     * <p>
-     * Business Rule (UC-HR3):
-     * When a leave request is APPROVED:
-     * 1. Update the LeaveRequest EntityData status to APPROVED
-     * 2. Deduct approved leave days from the employee's leave balance field
-     * 3. Publish approval event to Pub/Sub for notification consumers
-     * 4. If REJECTED, simply update status and publish rejection event
-     * <p>
-     * Access: SHIFT_SUPERVISOR or STORE_MANAGER
-     *
-     * @param leaveRequestId UUID of the leave request entity
-     * @param body Request body: { "status": "APPROVED"|"REJECTED", "reviewNote": "..." }
-     * @param caller Authenticated user
-     * @return Updated LeaveRequest entity with 200 status
-     */
-    @PatchMapping("/leave/{leaveRequestId}/status")
-    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER')")
-    public ResponseEntity<EntityData> updateLeaveStatus(@PathVariable UUID leaveRequestId, @RequestBody JsonNode body, @AuthenticationPrincipal UserPrincipal caller) {
-
-        String status = body.get("status").asText();
-        String reviewNote = body.has("reviewNote") ? body.get("reviewNote").asText() : "";
-
-        log.info("Leave request review: id={}, status={}, reviewer={}", leaveRequestId, status, caller.getUsername());
-
-        // TODO UC-HR3: Leave request approval workflow
-        // 1. Fetch LeaveRequest EntityData by ID
-        // 2. Validate current status is PENDING
-        // 3. If status == APPROVED:
-        //    a. Query employee's leave balance from EntityData payload
-        //    b. Deduct approved days count
-        //    c. Update and persist
-        //    d. Publish LEAVE_APPROVED event to Pub/Sub
-        // 4. If status == REJECTED:
-        //    a. Update status to REJECTED
-        //    b. Publish LEAVE_REJECTED event to Pub/Sub
-        // 5. Log audit trail with reviewer ID and note
-        // 6. Return updated LeaveRequest
-
-        return ResponseEntity.ok().build();
-    }
-
-    /**
      * Record clock-in for an employee at a store location.
      * <p>
      * Business Rule (UC-HR2 - Dual-Location Conflict):
@@ -91,8 +48,8 @@ public class HrController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<EntityData> clockIn(@RequestBody JsonNode body, @AuthenticationPrincipal UserPrincipal caller) {
 
-        String employeeId = body.get("employeeId").asText();
-        String storeLocationId = body.get("storeLocationId").asText();
+        String employeeId = body.get("employeeId").asString();
+        String storeLocationId = body.get("storeLocationId").asString();
 
         log.info("Clock-in request: employeeId={}, storeLocationId={}, requester={}", employeeId, storeLocationId, caller.getUsername());
 
@@ -135,7 +92,7 @@ public class HrController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<EntityData> clockOut(@RequestBody JsonNode body, @AuthenticationPrincipal UserPrincipal caller) {
 
-        String shiftRecordId = body.get("shiftRecordId").asText();
+        String shiftRecordId = body.get("shiftRecordId").asString();
         int breakMinutes = body.has("breakMinutes") ? body.get("breakMinutes").asInt() : 0;
 
         log.info("Clock-out request: shiftRecordId={}, breakMinutes={}, requester={}", shiftRecordId, breakMinutes, caller.getUsername());

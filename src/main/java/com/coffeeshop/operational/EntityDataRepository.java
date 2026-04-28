@@ -1,9 +1,12 @@
 package com.coffeeshop.operational;
 
 import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -21,5 +24,66 @@ public interface EntityDataRepository extends JpaRepository<EntityData, UUID> {
      * Find a single entity by type and UUID.
      */
     EntityData findByTypeAndId(String type, UUID id);
+
+    /**
+     * Filters by type and a single JSONB payload field equality.
+     * Uses PostgreSQL's ->> operator for text extraction.
+     * Example: findByTypeAndPayloadField("LeaveRequest", "employeeId", "uuid-value")
+     */
+    @Query(value = """
+            SELECT * FROM entity_data
+            WHERE type = :type
+              AND payload ->> :fieldName = :fieldValue
+            """,
+            countQuery = """
+                    SELECT COUNT(*) FROM entity_data
+                    WHERE type = :type
+                      AND payload ->> :fieldName = :fieldValue
+                    """,
+            nativeQuery = true)
+    Page<EntityData> findByTypeAndPayloadField(
+            @Param("type") String type,
+            @Param("fieldName") String fieldName,
+            @Param("fieldValue") String fieldValue,
+            Pageable pageable);
+
+    @Query(value = """
+            SELECT * FROM entity_data
+            WHERE type = :type
+              AND payload ->> :fieldName1 = :fieldValue1
+            """,
+            countQuery = """
+                    SELECT COUNT(*) FROM entity_data
+                    WHERE type = :type
+                      AND payload ->> :fieldName1 = :fieldValue1
+                    """,
+            nativeQuery = true)
+    Page<EntityData> findByTypeAndOnePayloadField(
+            @Param("type") String type,
+            @Param("fieldName1") String fieldName1,
+            @Param("fieldValue1") String fieldValue1,
+            Pageable pageable);
+
+    // Both filters
+    @Query(value = """
+            SELECT * FROM entity_data
+            WHERE type = :type
+              AND payload ->> :fieldName1 = :fieldValue1
+              AND payload ->> :fieldName2 = :fieldValue2
+            """,
+            countQuery = """
+                    SELECT COUNT(*) FROM entity_data
+                    WHERE type = :type
+                      AND payload ->> :fieldName1 = :fieldValue1
+                      AND payload ->> :fieldName2 = :fieldValue2
+                    """,
+            nativeQuery = true)
+    Page<EntityData> findByTypeAndTwoPayloadFields(
+            @Param("type") String type,
+            @Param("fieldName1") String fieldName1,
+            @Param("fieldValue1") String fieldValue1,
+            @Param("fieldName2") String fieldName2,
+            @Param("fieldValue2") String fieldValue2,
+            Pageable pageable);
 }
 
