@@ -1,5 +1,6 @@
 package com.coffeeshop.operational;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -64,7 +65,6 @@ public interface EntityDataRepository extends JpaRepository<EntityData, UUID> {
             @Param("fieldValue1") String fieldValue1,
             Pageable pageable);
 
-    // Both filters
     @Query(value = """
             SELECT * FROM entity_data
             WHERE type = :type
@@ -84,6 +84,33 @@ public interface EntityDataRepository extends JpaRepository<EntityData, UUID> {
             @Param("fieldValue1") String fieldValue1,
             @Param("fieldName2") String fieldName2,
             @Param("fieldValue2") String fieldValue2,
+            Pageable pageable);
+
+    /**
+     * Filters by type, a single JSONB field equality, and a JSONB date field range.
+     * Used for schedule queries: storeLocationId = X AND shiftDate BETWEEN start AND end.
+     * PostgreSQL casts the text value to date for the range comparison.
+     */
+    @Query(value = """
+        SELECT * FROM entity_data
+        WHERE type = :type
+          AND payload ->> :fieldName = :fieldValue
+          AND (payload ->> :dateField)::date BETWEEN :startDate AND :endDate
+        """,
+            countQuery = """
+        SELECT COUNT(*) FROM entity_data
+        WHERE type = :type
+          AND payload ->> :fieldName = :fieldValue
+          AND (payload ->> :dateField)::date BETWEEN :startDate AND :endDate
+        """,
+            nativeQuery = true)
+    Page<EntityData> findByTypeAndPayloadFieldInDateRange(
+            @Param("type")       String type,
+            @Param("fieldName")  String fieldName,
+            @Param("fieldValue") String fieldValue,
+            @Param("dateField")  String dateField,
+            @Param("startDate")  LocalDate startDate,
+            @Param("endDate")    LocalDate endDate,
             Pageable pageable);
 }
 

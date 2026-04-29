@@ -9,6 +9,8 @@ import com.coffeeshop.validation.ValidationEngineService;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
+
+import java.time.LocalDate;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -176,6 +178,35 @@ public class GenericEntityService {
 
         return entityDataRepository
                 .findByTypeAndPayloadField(type, fieldName, fieldValue, pageable)
+                .map(entity -> applyFieldMask(type, entity, caller));
+    }
+
+    /**
+     * Returns entities filtered by a JSONB field equality and a JSONB date field range.
+     * Pushes the date range filter entirely to PostgreSQL — no in-memory filtering.
+     * <p>
+     * Example: findByPayloadFieldInDateRange("Shift", "storeLocationId", uuid,
+     *              "shiftDate", startDate, endDate, pageable, caller)
+     * → WHERE type = 'Shift'
+     *     AND payload->>'storeLocationId' = '<uuid>'
+     *     AND (payload->>'shiftDate')::date BETWEEN :startDate AND :endDate
+     */
+    public Page<EntityData> findByPayloadFieldInDateRange(String type,
+                                                          String fieldName,
+                                                          String fieldValue,
+                                                          String dateField,
+                                                          LocalDate startDate,
+                                                          LocalDate endDate,
+                                                          Pageable pageable,
+                                                          UserPrincipal caller) {
+        log.debug("Fetching entities by field+date range: type='{}', {}='{}', {}=[{} → {}]",
+                type, fieldName, fieldValue, dateField, startDate, endDate);
+
+        metadataCacheService.getType(type);
+
+        return entityDataRepository
+                .findByTypeAndPayloadFieldInDateRange(
+                        type, fieldName, fieldValue, dateField, startDate, endDate, pageable)
                 .map(entity -> applyFieldMask(type, entity, caller));
     }
 
