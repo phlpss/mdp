@@ -396,24 +396,24 @@ docker run -p 8080:8080 \
 - [x] Global exception handling
 - [x] Database migrations (Flyway)
 - [x] Docker support
+- [x] MetadataCacheService.loadMetaTypes(): Neo4j Cypher queries for metadata loading
 
-### 🚧 TODO - Business Logic Implementation
+### TODO - Business Logic Implementation
 
 The following controllers have full method signatures and Javadoc but require implementation:
 
-- [ ] **HrController**: Leave approval, clock-in/out with dual-location conflict detection, schedule retrieval
+- [ ] **HrController**: Leave approval, clock-in/out with dual-location conflict detection, schedule retrieval - test
 - [ ] **FinanceController**: Daily closing reconciliation, payroll calculation, AI forecasting
-- [ ] **MetadataCacheService.loadMetaTypes()**: Neo4j Cypher queries for metadata loading
 - [ ] **ValidationEngineService.validateRelationshipRefs()**: Referential integrity checks
 - [ ] **BigQueryService**: ML forecasting integration with BigQuery remote functions
 - [ ] **User lookup**: Replace hardcoded in-memory users with EntityData-based user management
 
-### 🚧 TODO - Production Enhancements
+### TODO - Production Enhancements
 
 - [ ] Implement password hashing (BCrypt) for production users
 - [ ] Add OAuth2 / Social login integration
 - [ ] Implement audit logging for all entity changes
-- [ ] Add request rate limiting and DDoS protection
+- [ ] Add request rate limiting and DDoS protection (optional)
 - [ ] Implement transaction-level locking for concurrent updates
 - [ ] Add caching layer (Redis) for frequently accessed entities
 - [ ] Implement GraphQL layer for complex queries
@@ -474,6 +474,5 @@ The following controllers have full method signatures and Javadoc but require im
 
 ---
 
-**Last Updated**: 2026-04-10
 **Version**: 0.0.1-SNAPSHOT
 
