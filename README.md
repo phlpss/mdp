@@ -121,13 +121,13 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/coffeeshop
     username: postgres
-    password: password
+    password: pass
   
   neo4j:
     uri: bolt://localhost:7687
     authentication:
       username: neo4j
-      password: password
+      password: pass
 
 coffeeshop:
   jwt:

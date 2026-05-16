@@ -15,9 +15,9 @@ spring:
       password: disabled
 
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/coffeeshop}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/coffeeshop}
     username: ${DATABASE_USER:postgres}
-    password: ${DATABASE_PASSWORD:password}
+    password: ${DATABASE_PASSWORD:pass}
     driver-class-name: org.postgresql.Driver
 
   jpa:
