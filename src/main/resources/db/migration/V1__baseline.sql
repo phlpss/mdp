@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
  * - UUID is generated server-side for deterministic ordering
  */
 CREATE TABLE entity_data (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     type       VARCHAR(100) NOT NULL,
     payload    JSONB NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
