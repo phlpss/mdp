@@ -8,6 +8,10 @@ import tools.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.coffeeshop.security.UserPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -152,6 +156,36 @@ public class AuthController {
     }
 
     /**
+     * GET /api/v1/auth/me
+     * Returns the currently authenticated user's profile derived from the JWT claims.
+     */
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Object> getCurrentUser(@AuthenticationPrincipal UserPrincipal caller) {
+        log.info("GET /auth/me - caller={}", caller.getUsername());
+
+        UserCredentials user = IN_MEMORY_USERS.get(caller.getUsername());
+
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("id",       caller.getUserId().toString());
+        response.put("username", caller.getUsername());
+        response.put("email",    caller.getUsername() + "@coffeeshop.local");
+        response.put("firstName", caller.getUsername());
+        response.put("lastName",  "");
+        response.put("isActive",  true);
+        if (caller.getStoreLocationId() != null) {
+            response.put("locationId", caller.getStoreLocationId().toString());
+        } else {
+            response.putNull("locationId");
+        }
+        var rolesArray = response.putArray("roles");
+        caller.getRoles().forEach(r -> rolesArray.add(r.getValue()));
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    /**
      * Simple holder for user credentials.
      */
     private static class UserCredentials {
@@ -168,4 +202,3 @@ public class AuthController {
         }
     }
 }
-
