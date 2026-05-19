@@ -270,5 +270,68 @@ public class FinanceController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * GET /api/v1/finance/expenses/monthly-total
+     * Returns the total expense amount for the current month.
+     * TODO: Query Expense EntityData for the current month and sum the amount field.
+     */
+    @GetMapping("/expenses/monthly-total")
+    @PreAuthorize("hasAnyRole('ACCOUNTANT', 'STORE_MANAGER', 'BUSINESS_OWNER')")
+    public ResponseEntity<Object> getMonthlyExpenseTotal(@AuthenticationPrincipal UserPrincipal caller) {
+        log.info("GET /finance/expenses/monthly-total - requester={}", caller.getUsername());
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("total", 0.0);
+        response.put("message", "Monthly expense total stub - implementation pending");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/v1/finance/daily-kpis
+     * Returns today's revenue KPIs for the cashier/manager transaction view.
+     * TODO: Aggregate Transaction EntityData for today.
+     */
+    @GetMapping("/daily-kpis")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Object> getDailyKpis(@AuthenticationPrincipal UserPrincipal caller) {
+        log.info("GET /finance/daily-kpis - requester={}", caller.getUsername());
+        return ResponseEntity.ok(java.util.List.of());
+    }
+
+    /**
+     * GET /api/v1/finance/transactions
+     * Returns transactions filtered by storeLocationId and date for the closing report.
+     * TODO: Query Transaction EntityData with storeLocationId and date payload filters.
+     *
+     * @param storeLocationId UUID of the store
+     * @param date ISO-8601 date string (e.g. 2026-04-10)
+     * @param size page size
+     */
+    @GetMapping("/transactions")
+    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER', 'ACCOUNTANT', 'BUSINESS_OWNER')")
+    public ResponseEntity<Object> getTransactions(
+            @RequestParam(required = false) String storeLocationId,
+            @RequestParam(required = false) String date,
+            @RequestParam(defaultValue = "100") int size,
+            @AuthenticationPrincipal UserPrincipal caller) {
+
+        log.info("GET /finance/transactions - store={}, date={}, requester={}", storeLocationId, date, caller.getUsername());
+        ObjectNode response = objectMapper.createObjectNode();
+        response.putArray("content");
+        response.put("totalElements", 0);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/v1/finance/forecast/kpis
+     * Returns forecast KPI cards for the forecast dashboard page.
+     * TODO: Delegate to BigQuery ML forecast and shape into KpiData array.
+     */
+    @GetMapping("/forecast/kpis")
+    @PreAuthorize("hasAnyRole('STORE_MANAGER', 'BUSINESS_OWNER', 'ACCOUNTANT')")
+    public ResponseEntity<Object> getForecastKpis(@AuthenticationPrincipal UserPrincipal caller) {
+        log.info("GET /finance/forecast/kpis - requester={}", caller.getUsername());
+        return ResponseEntity.ok(java.util.List.of());
+    }
 }
 
