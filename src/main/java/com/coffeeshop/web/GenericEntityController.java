@@ -4,6 +4,8 @@ import com.coffeeshop.exception.IdempotencyConflictException;
 import com.coffeeshop.operational.EntityData;
 import com.coffeeshop.operational.GenericEntityService;
 import com.coffeeshop.security.UserPrincipal;
+import org.springframework.web.bind.annotation.*;
+import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.JsonNode;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,15 +19,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Generic REST controller for CRUD operations on all entity types.
@@ -151,6 +144,17 @@ public class GenericEntityController {
         log.info("PUT /api/v1/entities/{}/{} - user: {}", type, id, caller.getUsername());
 
         EntityData updated = genericEntityService.update(type, id, payload, caller);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<EntityData> patch(@PathVariable String type, @PathVariable UUID id, @RequestBody JsonNode payload, @AuthenticationPrincipal UserPrincipal caller) {
+        log.info("PATCH /api/v1/entities/{}/{} - user: {}", type, id, caller.getUsername());
+        EntityData existing = genericEntityService.findById(type, id, caller);
+        ObjectNode merged = ((ObjectNode) existing.getPayload()).deepCopy();
+        merged.setAll((ObjectNode) payload);
+        EntityData updated = genericEntityService.update(type, id, merged, caller);
         return ResponseEntity.ok(updated);
     }
 
