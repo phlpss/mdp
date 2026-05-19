@@ -1,10 +1,9 @@
 package com.coffeeshop.web;
 
-import com.coffeeshop.exception.EntityNotFoundException;
 import com.coffeeshop.operational.EntityData;
 import com.coffeeshop.operational.GenericEntityService;
-import com.coffeeshop.security.Role;
 import com.coffeeshop.security.UserPrincipal;
+import com.coffeeshop.service.GeneralService;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -12,10 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -54,6 +51,8 @@ public class HrController {
     private final GenericEntityService entityService;
     private final ObjectMapper objectMapper;
 
+    private final GeneralService generalService;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Schedule a shift (manager pre-assigns)  →  shiftStatus: SCHEDULED
     // ─────────────────────────────────────────────────────────────────────────
@@ -83,21 +82,21 @@ public class HrController {
             @RequestBody JsonNode body,
             @AuthenticationPrincipal UserPrincipal caller) {
 
-        String employeeId = requireText(body, "employeeId");
-        String storeLocationId = requireText(body, "storeLocationId");
+        String employeeId = generalService.requireText(body, "employeeId");
+        String storeLocationId = generalService.requireText(body, "storeLocationId");
 
         // UC-HR2: STORE_MANAGER can only schedule shifts at their own location
-        enforceLocationScope(caller, storeLocationId);
+        generalService.enforceLocationScope(caller, storeLocationId);
 
         // UC-HR2: Verify no overlapping SCHEDULED or ACTIVE shift exists for this employee
-        validateNoShiftConflict(employeeId, requireText(body, "shiftDate"), caller);
+        generalService.validateNoShiftConflict(employeeId, generalService.requireText(body, "shiftDate"), caller);
 
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("employeeId", employeeId);
         payload.put("storeLocationId", storeLocationId);
-        payload.put("shiftDate", requireText(body, "shiftDate"));
-        payload.put("startTime", requireText(body, "startTime"));
-        payload.put("endTime", requireText(body, "endTime"));
+        payload.put("shiftDate", generalService.requireText(body, "shiftDate"));
+        payload.put("startTime", generalService.requireText(body, "startTime"));
+        payload.put("endTime", generalService.requireText(body, "endTime"));
         payload.put("mealBreakMinutes", body.path("mealBreakMinutes").asInt(0));
         payload.put("restBreakMinutes", body.path("restBreakMinutes").asInt(0));
         payload.put("shiftStatus", "SCHEDULED");
@@ -137,8 +136,8 @@ public class HrController {
             @RequestBody JsonNode body,
             @AuthenticationPrincipal UserPrincipal caller) {
 
-        String employeeId = requireText(body, "employeeId");
-        String storeLocationId = requireText(body, "storeLocationId");
+        String employeeId = generalService.requireText(body, "employeeId");
+        String storeLocationId = generalService.requireText(body, "storeLocationId");
         String today = LocalDate.now().toString();
 
         log.info("Clock-in request: employeeId={}, storeLocationId={}, requester={}",
@@ -154,7 +153,7 @@ public class HrController {
 
         if (!activeShifts.isEmpty()) {
             EntityData activeShift = activeShifts.getContent().getFirst();
-            JsonNode activePayload = parsePayload(activeShift);
+            JsonNode activePayload = generalService.parsePayload(activeShift);
             String activeLocation = activePayload.path("storeLocationId").asString();
 
             if (activeLocation.equals(storeLocationId)) {
@@ -180,7 +179,7 @@ public class HrController {
 
         EntityData shiftToActivate = scheduledToday.getContent().stream()
                 .filter(s -> {
-                    JsonNode p = parsePayload(s);
+                    JsonNode p = generalService.parsePayload(s);
                     return today.equals(p.path("shiftDate").asString())
                             && storeLocationId.equals(p.path("storeLocationId").asString());
                 })
@@ -191,7 +190,7 @@ public class HrController {
 
         if (shiftToActivate != null) {
             // Activate the pre-scheduled shift
-            ObjectNode updated = (ObjectNode) parsePayload(shiftToActivate);
+            ObjectNode updated = (ObjectNode) generalService.parsePayload(shiftToActivate);
             updated.put("clockInTime", LocalDateTime.now().toString());
             updated.put("shiftStatus", "ACTIVE");
             result = entityService.update(SHIFT_TYPE, shiftToActivate.getId(), updated, caller);
@@ -242,12 +241,12 @@ public class HrController {
             @RequestBody JsonNode body,
             @AuthenticationPrincipal UserPrincipal caller) {
 
-        UUID shiftId = UUID.fromString(requireText(body, "shiftId"));
+        UUID shiftId = UUID.fromString(generalService.requireText(body, "shiftId"));
 
         log.info("Clock-out request: shiftId={}, requester={}", shiftId, caller.getUsername());
 
         EntityData shiftData = entityService.findById(SHIFT_TYPE, shiftId, caller);
-        JsonNode current = parsePayload(shiftData);
+        JsonNode current = generalService.parsePayload(shiftData);
 
         // Guard: must be ACTIVE
         String status = current.path("shiftStatus").asString();
@@ -316,7 +315,7 @@ public class HrController {
             @AuthenticationPrincipal UserPrincipal caller) {
 
         EntityData shiftData = entityService.findById(SHIFT_TYPE, id, caller);
-        JsonNode current = parsePayload(shiftData);
+        JsonNode current = generalService.parsePayload(shiftData);
 
         String status = current.path("shiftStatus").asString();
         if (!"SCHEDULED".equals(status)) {
@@ -324,55 +323,10 @@ public class HrController {
                     "Only SCHEDULED shifts can be cancelled (current status: " + status + ")");
         }
 
-        enforceLocationScope(caller, current.path("storeLocationId").asString());
+        generalService.enforceLocationScope(caller, current.path("storeLocationId").asString());
 
         ObjectNode updated = ((ObjectNode) current).put("shiftStatus", "CANCELLED");
         return ResponseEntity.ok(entityService.update(SHIFT_TYPE, id, updated, caller));
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Schedule view  →  planned + active + completed shifts in a date range
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * GET /api/v1/hr/schedule/{storeLocationId}?startDate=&endDate=&page=0&size=100
-     * <p>
-     * Returns all Shift records for a location in the date range, enriched with
-     * the employee's fullName and position from their Employee EntityData.
-     * <p>
-     * Each entry in the response carries a derived "shiftMode" field:
-     *   "PLANNED"   — shiftStatus=SCHEDULED, no clockInTime yet
-     *   "ACTIVE"    — clockedIn but not yet clocked out
-     *   "COMPLETED" — fully clocked in and out
-     *   "CANCELLED" — shift was canceled before it started
-     * <p>
-     * Access: SHIFT_SUPERVISOR and HR_MANAGER see any location.
-     *         STORE_MANAGER is restricted to their own storeLocationId from the JWT.
-     */
-    @GetMapping("/schedule/{storeLocationId}")
-    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER', 'HR_MANAGER')")
-    public ResponseEntity<Page<ScheduleEntryResponse>> getSchedule(
-            @PathVariable UUID storeLocationId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            Pageable pageable,
-            @AuthenticationPrincipal UserPrincipal caller) {
-
-        log.info("Schedule query: location={}, {}->{}, requester={}",
-                storeLocationId, startDate, endDate, caller.getUsername());
-
-        enforceLocationScope(caller, storeLocationId.toString());
-
-        Page<EntityData> shifts = entityService.findByPayloadFieldInDateRange(
-                SHIFT_TYPE,
-                "storeLocationId", storeLocationId.toString(),
-                "shiftDate", startDate, endDate,
-                pageable, caller);
-
-        Page<ScheduleEntryResponse> enriched = shifts
-                .map(shift -> enrichShiftWithEmployee(shift, caller));
-
-        return ResponseEntity.ok(enriched);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -401,130 +355,5 @@ public class HrController {
             String employeeFullName,   // from Employee payload
             String employeePosition    // from Employee payload
     ) {
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Private helpers
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Derives shiftMode from the shift payload fields:
-     *   clockInTime == null  AND shiftStatus == SCHEDULED  → PLANNED
-     *   clockInTime != null  AND clockOutTime == null      → ACTIVE
-     *   clockOutTime != null                               → COMPLETED
-     *   shiftStatus == CANCELLED                           → CANCELLED
-     */
-    private String deriveShiftMode(JsonNode payload) {
-        String status = payload.path("shiftStatus").asString("");
-        String clockInTime = payload.path("clockInTime").asString(null);
-        String clockOut = payload.path("clockOutTime").asString(null);
-
-        if ("CANCELLED".equals(status)) return "CANCELLED";
-        if (clockInTime == null || clockInTime.isBlank()) return "PLANNED";
-        if (clockOut == null || clockOut.isBlank()) return "ACTIVE";
-        return "COMPLETED";
-    }
-
-    /**
-     * Looks up the Employee EntityData for the shift and builds a ScheduleEntryResponse.
-     * If the employee record is missing (deleted/corrupted), employee fields are populated
-     * with fallback values rather than failing the entire schedule query.
-     */
-    private ScheduleEntryResponse enrichShiftWithEmployee(EntityData shift, UserPrincipal caller) {
-        JsonNode sp = parsePayload(shift);
-        String employeeId = sp.path("employeeId").asString(null);
-
-        String employeeFullName = "Unknown";
-        String employeePosition = "Unknown";
-
-        if (employeeId != null) {
-            try {
-                EntityData emp = entityService.findById(
-                        EMPLOYEE_TYPE, UUID.fromString(employeeId), caller);
-                JsonNode ep = parsePayload(emp);
-                employeeFullName = ep.path("fullName").asString("Unknown");
-                employeePosition = ep.path("position").asString("Unknown");
-            } catch (EntityNotFoundException e) {
-                log.warn("Employee not found for shift {}: employeeId={}", shift.getId(), employeeId);
-            }
-        }
-
-        return new ScheduleEntryResponse(
-                shift.getId(),
-                sp.path("shiftDate").asString(null),
-                sp.path("startTime").asString(null),
-                sp.path("endTime").asString(null),
-                sp.path("shiftStatus").asString(null),
-                deriveShiftMode(sp),
-                nullIfBlank(sp.path("clockInTime").asString(null)),
-                nullIfBlank(sp.path("clockOutTime").asString(null)),
-                sp.path("mealBreakMinutes").asInt(0),
-                sp.path("restBreakMinutes").asInt(0),
-                sp.path("paidMinutes").isNull() || sp.path("paidMinutes").isMissingNode()
-                        ? null : sp.path("paidMinutes").asInt(),
-                employeeId,
-                employeeFullName,
-                employeePosition
-        );
-    }
-
-    /**
-     * UC-HR2: Checks whether the employee already has a SCHEDULED or ACTIVE shift
-     * on the given date, to prevent double-booking via the schedule endpoint.
-     * Clock-in has its own real-time ACTIVE check — this guard is for pre-scheduling.
-     */
-    private void validateNoShiftConflict(String employeeId, String shiftDate,
-                                         UserPrincipal caller) {
-        Page<EntityData> existing = entityService.findByPayloadField(
-                SHIFT_TYPE, "employeeId", employeeId, Pageable.unpaged(), caller);
-
-        boolean conflict = existing.getContent().stream().anyMatch(s -> {
-            JsonNode p = parsePayload(s);
-            String date = p.path("shiftDate").asString("");
-            String status = p.path("shiftStatus").asString("");
-            return shiftDate.equals(date)
-                    && (status.equals("SCHEDULED") || status.equals("ACTIVE"));
-        });
-
-        if (conflict) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Employee already has a SCHEDULED or ACTIVE shift on " + shiftDate +
-                            ". Cancel the existing shift first.");
-        }
-    }
-
-    /**
-     * STORE_MANAGER is location-scoped to their JWT storeLocationId.
-     * HR_MANAGER and SHIFT_SUPERVISOR can access any location.
-     */
-    private void enforceLocationScope(UserPrincipal caller, String targetLocationId) {
-        if (caller.hasRole(Role.STORE_MANAGER)
-                && caller.getStoreLocationId() != null
-                && !caller.getStoreLocationId().toString().equals(targetLocationId)) {
-            throw new AccessDeniedException(
-                    "STORE_MANAGER is restricted to their assigned location");
-        }
-    }
-
-    private JsonNode parsePayload(EntityData entity) {
-        try {
-            return objectMapper.readTree(String.valueOf(entity.getPayload()));
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Corrupt payload for entity " + entity.getId());
-        }
-    }
-
-    private String nullIfBlank(String value) {
-        return (value == null || value.isBlank()) ? null : value;
-    }
-
-    private String requireText(JsonNode node, String field) {
-        JsonNode value = node.path(field);
-        if (value.isMissingNode() || value.isNull() || value.asString().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Missing required field: " + field);
-        }
-        return value.asString();
     }
 }
