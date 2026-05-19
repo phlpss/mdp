@@ -156,6 +156,29 @@ public class AuthController {
     }
 
     /**
+     * POST /api/v1/auth/logout
+     * JWT is stateless; actual token invalidation is client-side.
+     */
+    @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal UserPrincipal caller) {
+        log.debug("Logout: {}", caller.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * POST /api/v1/auth/refresh
+     * Refresh tokens are not yet issued by this backend.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<Object> refresh(@RequestBody JsonNode body) {
+        ObjectNode error = objectMapper.createObjectNode();
+        error.put("error", "NOT_IMPLEMENTED");
+        error.put("message", "Token refresh not supported; please log in again");
+        return new ResponseEntity<>(error, HttpStatus.NOT_IMPLEMENTED);
+    }
+
+    /**
      * GET /api/v1/auth/me
      * Returns the currently authenticated user's profile derived from the JWT claims.
      */
