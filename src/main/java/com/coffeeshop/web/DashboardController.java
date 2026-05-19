@@ -3,6 +3,7 @@ package com.coffeeshop.web;
 import com.coffeeshop.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -40,6 +41,7 @@ public class DashboardController {
     @GetMapping("/manager/kpis")
     @PreAuthorize("hasAnyRole('STORE_MANAGER', 'SHIFT_SUPERVISOR', 'HR_MANAGER')")
     public ResponseEntity<List<Object>> getManagerKpis(@AuthenticationPrincipal UserPrincipal caller) {
+        if (caller == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         log.info("GET /dashboard/manager/kpis - requester={}", caller.getUsername());
         return ResponseEntity.ok(List.of());
     }
@@ -51,6 +53,7 @@ public class DashboardController {
     @GetMapping("/manager/alerts")
     @PreAuthorize("hasAnyRole('STORE_MANAGER', 'SHIFT_SUPERVISOR', 'HR_MANAGER')")
     public ResponseEntity<List<Object>> getManagerAlerts(@AuthenticationPrincipal UserPrincipal caller) {
+        if (caller == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         log.info("GET /dashboard/manager/alerts - requester={}", caller.getUsername());
         return ResponseEntity.ok(List.of());
     }
@@ -68,6 +71,7 @@ public class DashboardController {
     public ResponseEntity<List<Object>> getOwnerKpis(
             @RequestParam(defaultValue = "month") String period,
             @AuthenticationPrincipal UserPrincipal caller) {
+        if (caller == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         log.info("GET /dashboard/owner/kpis period={} - requester={}", period, caller.getUsername());
         return ResponseEntity.ok(List.of());
     }
@@ -81,6 +85,7 @@ public class DashboardController {
     public ResponseEntity<Object> getOwnerRevenueChart(
             @RequestParam(defaultValue = "month") String period,
             @AuthenticationPrincipal UserPrincipal caller) {
+        if (caller == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         log.info("GET /dashboard/owner/revenue-chart period={} - requester={}", period, caller.getUsername());
         return ResponseEntity.ok(java.util.Map.of("labels", List.of(), "datasets", List.of()));
     }
@@ -94,6 +99,7 @@ public class DashboardController {
     public ResponseEntity<Object> getOwnerExpenseBreakdown(
             @RequestParam(defaultValue = "month") String period,
             @AuthenticationPrincipal UserPrincipal caller) {
+        if (caller == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         log.info("GET /dashboard/owner/expense-breakdown period={} - requester={}", period, caller.getUsername());
         return ResponseEntity.ok(java.util.Map.of("labels", List.of(), "datasets", List.of()));
     }

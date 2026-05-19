@@ -13,6 +13,7 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -115,6 +116,32 @@ public class GlobalExceptionHandler {
         response.put("status", HttpStatus.NOT_FOUND.value());
 
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    /**
+     * Handle AuthenticationException (401 Unauthorized).
+     * Spring Security 7.x throws InsufficientAuthenticationException (a subtype) when
+     * @PreAuthorize fails for an unauthenticated user instead of AccessDeniedException.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Object> handleAuthenticationException(
+            AuthenticationException ex,
+            WebRequest request) {
+
+        String requestId = UUID.randomUUID().toString();
+        MDC.put("requestId", requestId);
+
+        log.warn("Authentication required: {}", ex.getMessage());
+
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("error", "UNAUTHORIZED");
+        response.put("message", "Authentication required");
+        response.put("requestId", requestId);
+        response.put("timestamp", Instant.now().toString());
+        response.put("path", request.getDescription(false).replace("uri=", ""));
+        response.put("status", HttpStatus.UNAUTHORIZED.value());
+
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 
     /**
