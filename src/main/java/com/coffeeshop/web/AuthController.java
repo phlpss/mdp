@@ -1,7 +1,9 @@
 package com.coffeeshop.web;
 
+import com.coffeeshop.operational.EntityDataRepository;
 import com.coffeeshop.security.JwtTokenProvider;
-import com.coffeeshop.security.Role;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -17,9 +19,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Authentication controller for JWT token generation.
@@ -33,59 +36,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    // TODO: Replace this hardcoded map with EntityData lookup from PostgreSQL
-    private static final Map<String, UserCredentials> IN_MEMORY_USERS = Map.ofEntries(
-            Map.entry("barista1", new UserCredentials(
-                    UUID.fromString("00000000-0000-0000-0000-000000000001"),
-                    "barista1",
-                    Set.of(Role.BARISTA),
-                    UUID.fromString("00000000-0000-0000-0000-100000000001")
-            )),
-            Map.entry("shift_supervisor", new UserCredentials(
-                    UUID.fromString("00000000-0000-0000-0000-000000000002"),
-                    "shift_supervisor",
-                    Set.of(Role.SHIFT_SUPERVISOR),
-                    UUID.fromString("00000000-0000-0000-0000-100000000001")
-            )),
-            Map.entry("store_manager", new UserCredentials(
-                    UUID.fromString("00000000-0000-0000-0000-000000000003"),
-                    "store_manager",
-                    Set.of(Role.STORE_MANAGER),
-                    UUID.fromString("00000000-0000-0000-0000-100000000001")
-            )),
-            Map.entry("hr_manager", new UserCredentials(
-                    UUID.fromString("00000000-0000-0000-0000-000000000004"),
-                    "hr_manager",
-                    Set.of(Role.HR_MANAGER),
-                    UUID.fromString("00000000-0000-0000-0000-100000000001")
-            )),
-            Map.entry("accountant", new UserCredentials(
-                    UUID.fromString("00000000-0000-0000-0000-000000000005"),
-                    "accountant",
-                    Set.of(Role.ACCOUNTANT),
-                    UUID.fromString("00000000-0000-0000-0000-100000000001")
-            )),
-            Map.entry("it_specialist", new UserCredentials(
-                    UUID.fromString("00000000-0000-0000-0000-000000000006"),
-                    "it_specialist",
-                    Set.of(Role.IT_SPECIALIST),
-                    UUID.fromString("00000000-0000-0000-0000-100000000001")
-            )),
-            Map.entry("business_owner", new UserCredentials(
-                    UUID.fromString("00000000-0000-0000-0000-000000000007"),
-                    "business_owner",
-                    Set.of(Role.BUSINESS_OWNER),
-                    UUID.fromString("00000000-0000-0000-0000-100000000001")
-            ))
-    );
+
+    private static final String USER_TYPE = "User";
+
     private final JwtTokenProvider jwtTokenProvider;
     private final ObjectMapper objectMapper;
+    private final EntityDataRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(JwtTokenProvider jwtTokenProvider, ObjectMapper objectMapper) {
+    public AuthController(JwtTokenProvider jwtTokenProvider, ObjectMapper objectMapper, EntityDataRepository userRepository, PasswordEncoder passwordEncoder) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.objectMapper = objectMapper;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
-
     /**
      * Authenticate a user and return a JWT token.
      * <p>
@@ -113,18 +77,8 @@ public class AuthController {
             return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         }
 
-        // TODO: Replace hardcoded password check with bcrypt comparison
-        // TODO: Lookup user from EntityData with type="User" and query by username field
-        if (!password.equals("password")) {
-            log.warn("Login failed: invalid password for username={}", username);
-            ObjectNode error = objectMapper.createObjectNode();
-            error.put("error", "INVALID_CREDENTIALS");
-            error.put("message", "Invalid username or password");
-            return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
-        }
-
-        UserCredentials user = IN_MEMORY_USERS.get(username);
-        if (user == null) {
+        var page = userRepository.findByTypeAndPayloadField(USER_TYPE, "username", username, PageRequest.of(0, 1));
+        if (page.isEmpty()) {
             log.warn("Login failed: user not found: {}", username);
             ObjectNode error = objectMapper.createObjectNode();
             error.put("error", "INVALID_CREDENTIALS");
@@ -132,25 +86,41 @@ public class AuthController {
             return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
         }
 
-        // Generate JWT token
-        String token = jwtTokenProvider.generateToken(
-                user.userId,
-                user.username,
-                user.roles.stream().map(Role::getValue).toList(),
-                user.storeLocationId
-        );
+        var userEntity = page.getContent().getFirst();
+        JsonNode payload = userEntity.getPayload();
+        String storedHash = payload.path("passwordHash").asString("");
 
-        log.info("Login successful: username={}, roles={}", username, user.roles.size());
+        if (!passwordEncoder.matches(password, storedHash)) {
+            log.warn("Login failed: invalid password for username={}", username);
+            ObjectNode error = objectMapper.createObjectNode();
+            error.put("error", "INVALID_CREDENTIALS");
+            error.put("message", "Invalid username or password");
+            return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!payload.path("isActive").asBoolean(true)) {
+            ObjectNode error = objectMapper.createObjectNode();
+            error.put("error", "ACCOUNT_DISABLED");
+            error.put("message", "Account is disabled");
+            return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<String> roles = StreamSupport.stream(payload.path("roles").spliterator(), false).map(JsonNode::asString).collect(Collectors.toList());
+        String locationIdStr = payload.path("storeLocationId").asString(null);
+        UUID storeLocationId = locationIdStr != null ? UUID.fromString(locationIdStr) : null;
+
+        // Generate JWT token
+        String token = jwtTokenProvider.generateToken(userEntity.getId(), username, roles, storeLocationId);
+
+        log.info("Login successful: username={}, roles={}", username, roles);
 
         ObjectNode response = objectMapper.createObjectNode();
         response.put("token", token);
-        response.put("username", user.username);
-        response.put("userId", user.userId.toString());
+        response.put("username", username);
+        response.put("userId", userEntity.getId().toString());
         response.put("expiresIn", 86400); // 24 hours in seconds
-        response.putArray("roles").addAll(
-                user.roles.stream().map(Role::getValue)
-                        .map(role -> objectMapper.convertValue(role, JsonNode.class)).toList()
-        );
+        var rolesArray = response.putArray("roles");
+        roles.forEach(rolesArray::add);
 
         return ResponseEntity.ok(response);
     }
@@ -187,8 +157,6 @@ public class AuthController {
     public ResponseEntity<Object> getCurrentUser(@AuthenticationPrincipal UserPrincipal caller) {
         log.info("GET /auth/me - caller={}", caller.getUsername());
 
-        UserCredentials user = IN_MEMORY_USERS.get(caller.getUsername());
-
         ObjectNode response = objectMapper.createObjectNode();
         response.put("id",       caller.getUserId().toString());
         response.put("username", caller.getUsername());
@@ -205,23 +173,5 @@ public class AuthController {
         caller.getRoles().forEach(r -> rolesArray.add(r.getValue()));
 
         return ResponseEntity.ok(response);
-    }
-
-
-    /**
-     * Simple holder for user credentials.
-     */
-    private static class UserCredentials {
-        final UUID userId;
-        final String username;
-        final Set<Role> roles;
-        final UUID storeLocationId;
-
-        UserCredentials(UUID userId, String username, Set<Role> roles, UUID storeLocationId) {
-            this.userId = userId;
-            this.username = username;
-            this.roles = roles;
-            this.storeLocationId = storeLocationId;
-        }
     }
 }
