@@ -2,6 +2,7 @@ package com.coffeeshop.web;
 
 import com.coffeeshop.operational.EntityDataRepository;
 import com.coffeeshop.security.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import tools.jackson.databind.JsonNode;
@@ -35,6 +36,7 @@ import java.util.stream.StreamSupport;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private static final String USER_TYPE = "User";
@@ -43,13 +45,8 @@ public class AuthController {
     private final ObjectMapper objectMapper;
     private final EntityDataRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EntityDataRepository entityDataRepository;
 
-    public AuthController(JwtTokenProvider jwtTokenProvider, ObjectMapper objectMapper, EntityDataRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.objectMapper = objectMapper;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
     /**
      * Authenticate a user and return a JWT token.
      * <p>
@@ -108,9 +105,9 @@ public class AuthController {
         List<String> roles = StreamSupport.stream(payload.path("roles").spliterator(), false).map(JsonNode::asString).collect(Collectors.toList());
         String locationIdStr = payload.path("storeLocationId").asString(null);
         UUID storeLocationId = locationIdStr != null ? UUID.fromString(locationIdStr) : null;
+        UUID employeeId = UUID.fromString(payload.path("employeeId").asString());
 
-        // Generate JWT token
-        String token = jwtTokenProvider.generateToken(userEntity.getId(), username, roles, storeLocationId);
+        String token = jwtTokenProvider.generateToken(employeeId, username, roles, storeLocationId);
 
         log.info("Login successful: username={}, roles={}", username, roles);
 
@@ -157,12 +154,20 @@ public class AuthController {
     public ResponseEntity<Object> getCurrentUser(@AuthenticationPrincipal UserPrincipal caller) {
         log.info("GET /auth/me - caller={}", caller.getUsername());
 
+        String fullName = caller.getUsername();
+        var employeeOpt = entityDataRepository.findById(caller.getUserId());
+        if (employeeOpt.isPresent()) {
+            String name = employeeOpt.get().getPayload().path("fullName").asString(null);
+            if (name != null && !name.isBlank()) {
+                fullName = name;
+            }
+        }
+
         ObjectNode response = objectMapper.createObjectNode();
-        response.put("id",       caller.getUserId().toString());
-        response.put("username", caller.getUsername());
-        response.put("email",    caller.getUsername() + "@coffeeshop.local");
-        response.put("firstName", caller.getUsername());
-        response.put("lastName",  "");
+        response.put("id",        caller.getUserId().toString());
+        response.put("username",  caller.getUsername());
+        response.put("email",     caller.getUsername() + "@coffeeshop.local");
+        response.put("fullName",  fullName);
         response.put("isActive",  true);
         if (caller.getStoreLocationId() != null) {
             response.put("locationId", caller.getStoreLocationId().toString());
