@@ -320,17 +320,6 @@ public class LeaveController {
     // 6. Read endpoints
     // ─────────────────────────────────────────────────────────────────────────
 
-    @GetMapping("/my")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<EntityData>> getMyLeaveRequests(
-            Pageable pageable,
-            @AuthenticationPrincipal UserPrincipal caller) {
-
-        Page<EntityData> mine = entityService.findByPayloadField(
-                LEAVE_TYPE, "employeeId", caller.getUserId().toString(), pageable, caller);
-        return ResponseEntity.ok(mine);
-    }
-
     @GetMapping
     @PreAuthorize("hasAnyRole('HR_MANAGER', 'STORE_MANAGER', 'SHIFT_SUPERVISOR')")
     public ResponseEntity<Page<EntityData>> getAllLeaveRequests(

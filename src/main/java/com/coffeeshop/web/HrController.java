@@ -4,6 +4,7 @@ import com.coffeeshop.operational.EntityData;
 import com.coffeeshop.operational.GenericEntityService;
 import com.coffeeshop.security.UserPrincipal;
 import com.coffeeshop.service.GeneralService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -52,6 +53,48 @@ public class HrController {
     private final ObjectMapper objectMapper;
 
     private final GeneralService generalService;
+    private final PasswordEncoder passwordEncoder;
+    /**
+     +     * POST /api/v1/hr/employees
+     +     * Creates an Employee entity and a linked User account atomically.
+     +     * Request body: employee payload + "password" field (plain text, hashed here).
+     +     */
+    @PostMapping("/employees")
+    @PreAuthorize("hasAnyRole('HR_MANAGER', 'IT_SPECIALIST')")
+    public ResponseEntity<EntityData> createEmployee(@RequestBody JsonNode body, @AuthenticationPrincipal UserPrincipal caller) {
+
+        String password = body.has("password") ? body.get("password").asString() : null;
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // Strip password from employee payload before storing
+        ObjectNode employeePayload = (ObjectNode) body.deepCopy();
+        employeePayload.remove("password");
+        EntityData employee = entityService.create("Employee", employeePayload, caller);
+
+        // Derive username from email or fallback to employeeId
+        String username = employeePayload.path("email").asString(employee.getId().toString());
+        String role = employeePayload.path("role").asString("BARISTA");
+        String fullName = employeePayload.path("fullName").asString(null);
+        String email = employeePayload.path("email").asString(null);
+
+        ObjectNode userPayload = objectMapper.createObjectNode();
+        userPayload.put("fullName", fullName);
+        userPayload.put("email", email);
+        userPayload.put("username", username);
+        userPayload.put("passwordHash", passwordEncoder.encode(password));
+        userPayload.put("isActive", true);
+        userPayload.put("employeeId", employee.getId().toString());
+        userPayload.putArray("roles").add(role.toUpperCase());
+        String locId = employeePayload.path("storeLocationId").asString(null);
+        if (locId != null) userPayload.put("storeLocationId", locId);
+
+        entityService.create("User", userPayload, caller);
+        log.info("User created: employeeId={}, username={}", employee.getId(), username);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(employee);
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Schedule a shift (manager pre-assigns)  →  shiftStatus: SCHEDULED

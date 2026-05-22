@@ -3,6 +3,9 @@ package com.coffeeshop.web;
 import com.coffeeshop.operational.EntityData;
 import com.coffeeshop.operational.GenericEntityService;
 import com.coffeeshop.security.UserPrincipal;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -25,18 +28,15 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/leaves")
+@RequiredArgsConstructor
 public class EmployeeLeaveController {
 
     private static final String EMP_TYPE = "Employee";
 
     private final GenericEntityService genericEntityService;
     private final ObjectMapper objectMapper;
-
-    public EmployeeLeaveController(GenericEntityService genericEntityService,
-                                   ObjectMapper objectMapper) {
-        this.genericEntityService = genericEntityService;
-        this.objectMapper = objectMapper;
-    }
+    private final GenericEntityService entityService;
+    private static final String LEAVE_TYPE = "LeaveRequest";
 
     /**
      * GET /api/v1/leaves/my/balance
@@ -81,5 +81,15 @@ public class EmployeeLeaveController {
         n.put("used",  used);
         n.put("total", total);
         return n;
+    }
+
+    @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Page<EntityData>> getMyLeaveRequests(
+            Pageable pageable, @AuthenticationPrincipal UserPrincipal caller) {
+
+        Page<EntityData> mine = entityService.findByPayloadField(
+                LEAVE_TYPE, "employeeId", caller.getUserId().toString(), pageable, caller);
+        return ResponseEntity.ok(mine);
     }
 }

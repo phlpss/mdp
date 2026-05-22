@@ -75,6 +75,12 @@ public class GenericEntityController {
             }
         }
 
+        if ("Employee".equals(type) && payload instanceof ObjectNode emp) {
+            if (!emp.has("ptoBalance") || emp.get("ptoBalance").isNull()) emp.put("ptoBalance", 20);
+            if (!emp.has("sickBalance") || emp.get("sickBalance").isNull()) emp.put("sickBalance", 10);
+            if (!emp.has("holidayBalance") || emp.get("holidayBalance").isNull()) emp.put("holidayBalance", 10);
+        }
+
         // Create entity
         EntityData created = genericEntityService.create(type, payload, caller);
         ResponseEntity<EntityData> response = new ResponseEntity<>(created, HttpStatus.CREATED);
