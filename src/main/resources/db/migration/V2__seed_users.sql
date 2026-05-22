@@ -1,7 +1,7 @@
--- Seeds the 7 demo users as EntityData with type='User'.
+-- Seeds the 7 demo users as EntityData with type='Employee'.
 -- Passwords are BCrypt hashes of "password".
 INSERT INTO entity_data (id, type, payload)
-VALUES ('00000000-0000-0000-0000-000000000001', 'User', '{
+VALUES ('00000000-0000-0000-0000-000000000001', 'Employee', '{
   "username": "barista1",
   "passwordHash": "$2a$12$xELgzHtRGOG4zDw1ZEJHa.PAGe3eq6oLtP5DlgjNyRUxKP58EEAhu",
   "roles": [
@@ -10,7 +10,7 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'User', '{
   "storeLocationId": "00000000-0000-0000-0000-100000000001",
   "isActive": true
 }'),
-       ('00000000-0000-0000-0000-000000000002', 'User', '{
+       ('00000000-0000-0000-0000-000000000002', 'Employee', '{
          "username": "shift_supervisor",
          "passwordHash": "$2a$12$xELgzHtRGOG4zDw1ZEJHa.PAGe3eq6oLtP5DlgjNyRUxKP58EEAhu",
          "roles": [
@@ -19,7 +19,7 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'User', '{
          "storeLocationId": "00000000-0000-0000-0000-100000000001",
          "isActive": true
        }'),
-       ('00000000-0000-0000-0000-000000000003', 'User', '{
+       ('00000000-0000-0000-0000-000000000003', 'Employee', '{
          "username": "store_manager",
          "passwordHash": "$2a$12$xELgzHtRGOG4zDw1ZEJHa.PAGe3eq6oLtP5DlgjNyRUxKP58EEAhu",
          "roles": [
@@ -28,7 +28,7 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'User', '{
          "storeLocationId": "00000000-0000-0000-0000-100000000001",
          "isActive": true
        }'),
-       ('00000000-0000-0000-0000-000000000004', 'User', '{
+       ('00000000-0000-0000-0000-000000000004', 'Employee', '{
          "username": "hr_manager",
          "passwordHash": "$2a$12$xELgzHtRGOG4zDw1ZEJHa.PAGe3eq6oLtP5DlgjNyRUxKP58EEAhu",
          "roles": [
@@ -37,7 +37,7 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'User', '{
          "storeLocationId": "00000000-0000-0000-0000-100000000001",
          "isActive": true
        }'),
-       ('00000000-0000-0000-0000-000000000005', 'User', '{
+       ('00000000-0000-0000-0000-000000000005', 'Employee', '{
          "username": "accountant",
          "passwordHash": "$2a$12$xELgzHtRGOG4zDw1ZEJHa.PAGe3eq6oLtP5DlgjNyRUxKP58EEAhu",
          "roles": [
@@ -46,7 +46,7 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'User', '{
          "storeLocationId": "00000000-0000-0000-0000-100000000001",
          "isActive": true
        }'),
-       ('00000000-0000-0000-0000-000000000006', 'User', '{
+       ('00000000-0000-0000-0000-000000000006', 'Employee', '{
          "username": "it_specialist",
          "passwordHash": "$2a$12$xELgzHtRGOG4zDw1ZEJHa.PAGe3eq6oLtP5DlgjNyRUxKP58EEAhu",
          "roles": [
@@ -55,7 +55,7 @@ VALUES ('00000000-0000-0000-0000-000000000001', 'User', '{
          "storeLocationId": "00000000-0000-0000-0000-100000000001",
          "isActive": true
        }'),
-       ('00000000-0000-0000-0000-000000000007', 'User', '{
+       ('00000000-0000-0000-0000-000000000007', 'Employee', '{
          "username": "business_owner",
          "passwordHash": "$2a$12$xELgzHtRGOG4zDw1ZEJHa.PAGe3eq6oLtP5DlgjNyRUxKP58EEAhu",
          "roles": [
