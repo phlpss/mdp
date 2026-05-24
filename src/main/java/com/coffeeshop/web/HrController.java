@@ -1,6 +1,7 @@
 package com.coffeeshop.web;
 
 import com.coffeeshop.operational.EntityData;
+import com.coffeeshop.operational.EntityDataRepository;
 import com.coffeeshop.operational.GenericEntityService;
 import com.coffeeshop.security.UserPrincipal;
 import com.coffeeshop.service.GeneralService;
@@ -50,8 +51,8 @@ public class HrController {
     private static final String EMPLOYEE_TYPE = "Employee";
 
     private final GenericEntityService entityService;
+    private final EntityDataRepository entityDataRepository;
     private final ObjectMapper objectMapper;
-
     private final GeneralService generalService;
     private final PasswordEncoder passwordEncoder;
     /**
@@ -90,7 +91,7 @@ public class HrController {
         String locId = employeePayload.path("storeLocationId").asString(null);
         if (locId != null) userPayload.put("storeLocationId", locId);
 
-        entityService.create("User", userPayload, caller);
+        entityDataRepository.save(EntityData.builder().type("User").payload(userPayload).build());
         log.info("User created: employeeId={}, username={}", employee.getId(), username);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(employee);

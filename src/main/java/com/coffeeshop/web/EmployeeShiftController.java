@@ -70,7 +70,7 @@ public class EmployeeShiftController {
      * Returns shifts for a specific employee (manager-facing endpoint used by employee detail view).
      */
     @GetMapping("/employee/{employeeId}")
-    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER', 'HR_MANAGER', 'BUSINESS_OWNER')")
+    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER', 'HR_MANAGER', 'BUSINESS_OWNER') or #caller.userId == #employeeId")
     public ResponseEntity<List<EntityData>> getShiftsForEmployee(
             @PathVariable UUID employeeId,
             @AuthenticationPrincipal UserPrincipal caller) {
