@@ -1,5 +1,7 @@
 package com.coffeeshop.web;
 
+import com.coffeeshop.exception.UnknownEntityTypeException;
+import com.coffeeshop.metadata.MetaAttribute;
 import com.coffeeshop.metadata.MetadataCacheService;
 import com.coffeeshop.metadata.MetaType;
 import tools.jackson.databind.JsonNode;
@@ -11,12 +13,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 
 /**
  * REST controller exposing the in-memory metadata schema to the frontend.
- * <p>
- * These endpoints are read-only and serve the MetaType definitions that
- * the Angular Metadata Studio uses to render dynamic forms and entity tables.
  */
 @Slf4j
 @RestController
@@ -29,22 +29,17 @@ public class MetaController {
         this.metadataCacheService = metadataCacheService;
     }
 
-    /**
-     * GET /api/v1/meta/types
-     * Returns all MetaType definitions from the in-memory cache.
-     */
+    // ── READ ─────────────────────────────────────────────────────────────────
+
+    /** GET /api/v1/meta/types */
     @GetMapping("/types")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<MetaType>> getAllTypes() {
         log.debug("GET /api/v1/meta/types");
-        List<MetaType> types = List.copyOf(metadataCacheService.getAllTypes().values());
-        return ResponseEntity.ok(types);
+        return ResponseEntity.ok(List.copyOf(metadataCacheService.getAllTypes().values()));
     }
 
-    /**
-     * GET /api/v1/meta/types/{name}
-     * Returns a single MetaType by name.
-     */
+    /** GET /api/v1/meta/types/{name} */
     @GetMapping("/types/{name}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MetaType> getType(@PathVariable String name) {
@@ -54,68 +49,141 @@ public class MetaController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // ── WRITE — TYPES ────────────────────────────────────────────────────────
+
     /**
      * POST /api/v1/meta/types
-     * Create a new MetaType in Neo4j.
-     * TODO: Implement write-through to Neo4j and reload cache.
+     * Body: { "name": "Supplier", "sensitiveFields": ["bankAccount"] }
      */
     @PostMapping("/types")
     @PreAuthorize("hasRole('IT_SPECIALIST')")
     public ResponseEntity<Object> createType(@RequestBody JsonNode body) {
-        log.warn("POST /api/v1/meta/types - not yet implemented");
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("error", "NOT_IMPLEMENTED", "message", "MetaType write-through to Neo4j pending"));
+        String name = body.path("name").asString(null);
+        if (name == null || name.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "VALIDATION_ERROR", "message", "Field 'name' is required"));
+        }
+        if (metadataCacheService.hasType(name)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "CONFLICT", "message", "MetaType '" + name + "' already exists"));
+        }
+        log.info("POST /api/v1/meta/types - creating type '{}'", name);
+        MetaType created = metadataCacheService.createType(name, toStringList(body.path("sensitiveFields")));
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     /**
      * PUT /api/v1/meta/types/{name}
-     * Update an existing MetaType in Neo4j.
-     * TODO: Implement write-through to Neo4j and reload cache.
+     * Body: { "sensitiveFields": ["salary"] }
      */
     @PutMapping("/types/{name}")
     @PreAuthorize("hasRole('IT_SPECIALIST')")
     public ResponseEntity<Object> updateType(@PathVariable String name, @RequestBody JsonNode body) {
-        log.warn("PUT /api/v1/meta/types/{} - not yet implemented", name);
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("error", "NOT_IMPLEMENTED", "message", "MetaType write-through to Neo4j pending"));
+        log.info("PUT /api/v1/meta/types/{}", name);
+        try {
+            MetaType updated = metadataCacheService.updateType(name, toStringList(body.path("sensitiveFields")));
+            return ResponseEntity.ok(updated);
+        } catch (UnknownEntityTypeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "NOT_FOUND", "message", "MetaType '" + name + "' not found"));
+        }
     }
+
+    // ── WRITE — ATTRIBUTES ───────────────────────────────────────────────────
 
     /**
      * POST /api/v1/meta/types/{typeName}/attributes
-     * Add an attribute to an existing MetaType.
-     * TODO: Implement write-through to Neo4j and reload cache.
+     * Body: { "name": "emergencyContact", "dataType": "STRING", "mandatory": false }
      */
     @PostMapping("/types/{typeName}/attributes")
     @PreAuthorize("hasRole('IT_SPECIALIST')")
     public ResponseEntity<Object> addAttribute(@PathVariable String typeName, @RequestBody JsonNode body) {
-        log.warn("POST /api/v1/meta/types/{}/attributes - not yet implemented", typeName);
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("error", "NOT_IMPLEMENTED", "message", "MetaAttribute write-through to Neo4j pending"));
+        String attrName = body.path("name").asString(null);
+        if (attrName == null || attrName.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "VALIDATION_ERROR", "message", "Field 'name' is required"));
+        }
+        log.info("POST /api/v1/meta/types/{}/attributes - adding '{}'", typeName, attrName);
+        try {
+            MetaType updated = metadataCacheService.addAttribute(typeName, parseAttribute(body));
+            return ResponseEntity.status(HttpStatus.CREATED).body(updated);
+        } catch (UnknownEntityTypeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "NOT_FOUND", "message", "MetaType '" + typeName + "' not found"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
+        }
     }
 
     /**
      * PUT /api/v1/meta/types/{typeName}/attributes/{attrName}
-     * Update an existing attribute.
-     * TODO: Implement write-through to Neo4j and reload cache.
+     * Body: { "dataType": "STRING", "mandatory": true, "min": 2, "max": 100 }
      */
     @PutMapping("/types/{typeName}/attributes/{attrName}")
     @PreAuthorize("hasRole('IT_SPECIALIST')")
     public ResponseEntity<Object> updateAttribute(
-            @PathVariable String typeName, @PathVariable String attrName, @RequestBody JsonNode body) {
-        log.warn("PUT /api/v1/meta/types/{}/attributes/{} - not yet implemented", typeName, attrName);
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(Map.of("error", "NOT_IMPLEMENTED", "message", "MetaAttribute write-through to Neo4j pending"));
+            @PathVariable String typeName,
+            @PathVariable String attrName,
+            @RequestBody JsonNode body) {
+        log.info("PUT /api/v1/meta/types/{}/attributes/{}", typeName, attrName);
+        try {
+            MetaAttribute attr = new MetaAttribute(
+                    attrName,
+                    body.path("dataType").asString("STRING"),
+                    body.path("mandatory").asBoolean(false),
+                    body.path("min").isNull() || body.path("min").isMissingNode() ? null : body.path("min").asInt(),
+                    body.path("max").isNull() || body.path("max").isMissingNode() ? null : body.path("max").asInt(),
+                    toStringList(body.path("allowedValues"))
+            );
+            MetaType updated = metadataCacheService.updateAttribute(typeName, attrName, attr);
+            return ResponseEntity.ok(updated);
+        } catch (UnknownEntityTypeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "NOT_FOUND", "message", "MetaType '" + typeName + "' not found"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+        }
     }
 
     /**
      * DELETE /api/v1/meta/types/{typeName}/attributes/{attrName}
-     * Remove an attribute from a MetaType.
-     * TODO: Implement write-through to Neo4j and reload cache.
      */
     @DeleteMapping("/types/{typeName}/attributes/{attrName}")
     @PreAuthorize("hasRole('IT_SPECIALIST')")
-    public ResponseEntity<Void> deleteAttribute(@PathVariable String typeName, @PathVariable String attrName) {
-        log.warn("DELETE /api/v1/meta/types/{}/attributes/{} - not yet implemented", typeName, attrName);
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<Void> deleteAttribute(
+            @PathVariable String typeName,
+            @PathVariable String attrName) {
+        log.info("DELETE /api/v1/meta/types/{}/attributes/{}", typeName, attrName);
+        try {
+            metadataCacheService.deleteAttribute(typeName, attrName);
+            return ResponseEntity.noContent().build();
+        } catch (UnknownEntityTypeException | IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private MetaAttribute parseAttribute(JsonNode body) {
+        return new MetaAttribute(
+                body.path("name").asString(),
+                body.path("dataType").asString("STRING"),
+                body.path("mandatory").asBoolean(false),
+                body.path("min").isNull() || body.path("min").isMissingNode() ? null : body.path("min").asInt(),
+                body.path("max").isNull() || body.path("max").isMissingNode() ? null : body.path("max").asInt(),
+                toStringList(body.path("allowedValues"))
+        );
+    }
+
+    private List<String> toStringList(JsonNode node) {
+        if (node == null || node.isNull() || node.isMissingNode()) return List.of();
+        if (node.isArray()) {
+            return StreamSupport.stream(node.spliterator(), false)
+                    .map(JsonNode::asString)
+                    .toList();
+        }
+        return List.of();
     }
 }

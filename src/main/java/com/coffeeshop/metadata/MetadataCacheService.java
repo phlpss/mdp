@@ -216,4 +216,157 @@ public class MetadataCacheService {
     public Map<String, MetaType> getAllTypes() {
         return Collections.unmodifiableMap(typeCache);
     }
+
+    /**
+     * Create a new MetaType node in Neo4j and add it to the cache.
+     */
+    public synchronized MetaType createType(String name, List<String> sensitiveFields) {
+        String cypher = """
+                MERGE (mt:MetaType {name: $name})
+                ON CREATE SET mt.sensitiveFields = $sensitiveFields
+                RETURN mt.name AS typeName
+                """;
+        neo4jClient.query(cypher)
+                .bind(name).to("name")
+                .bind(sensitiveFields != null ? sensitiveFields : List.of()).to("sensitiveFields")
+                .run();
+
+        MetaType created = new MetaType(name, List.of(),
+                sensitiveFields != null ? sensitiveFields : List.of());
+        typeCache.put(name, created);
+        log.info("Created MetaType '{}' in Neo4j and cache", name);
+        return created;
+    }
+
+    /**
+     * Update sensitiveFields on an existing MetaType in Neo4j and refresh cache.
+     */
+    public synchronized MetaType updateType(String name, List<String> sensitiveFields) {
+        if (!typeCache.containsKey(name)) throw new UnknownEntityTypeException(name);
+
+        String cypher = """
+                MATCH (mt:MetaType {name: $name})
+                SET mt.sensitiveFields = $sensitiveFields
+                """;
+        neo4jClient.query(cypher)
+                .bind(name).to("name")
+                .bind(sensitiveFields != null ? sensitiveFields : List.of()).to("sensitiveFields")
+                .run();
+
+        MetaType existing = typeCache.get(name);
+        MetaType updated = new MetaType(name, existing.attributes(),
+                sensitiveFields != null ? sensitiveFields : List.of());
+        typeCache.put(name, updated);
+        log.info("Updated MetaType '{}' sensitiveFields in Neo4j and cache", name);
+        return updated;
+    }
+
+    /**
+     * Add a new MetaAttribute node to a MetaType in Neo4j and update cache.
+     */
+    public synchronized MetaType addAttribute(String typeName, MetaAttribute attr) {
+        MetaType existing = typeCache.get(typeName);
+        if (existing == null) throw new UnknownEntityTypeException(typeName);
+
+        boolean alreadyExists = existing.attributes().stream()
+                .anyMatch(a -> a.name().equals(attr.name()));
+        if (alreadyExists) throw new IllegalArgumentException(
+                "Attribute '" + attr.name() + "' already exists on type '" + typeName + "'");
+
+        String cypher = """
+                MATCH (mt:MetaType {name: $typeName})
+                CREATE (ma:MetaAttribute {
+                    name:          $attrName,
+                    dataType:      $dataType,
+                    mandatory:     $mandatory,
+                    min:           $min,
+                    max:           $max,
+                    allowedValues: $allowedValues
+                })
+                CREATE (mt)-[:HAS_ATTRIBUTE]->(ma)
+                """;
+        neo4jClient.query(cypher)
+                .bind(typeName).to("typeName")
+                .bind(attr.name()).to("attrName")
+                .bind(attr.dataType()).to("dataType")
+                .bind(attr.mandatory()).to("mandatory")
+                .bind(attr.min()).to("min")
+                .bind(attr.max()).to("max")
+                .bind(attr.allowedValues() != null ? attr.allowedValues() : List.of()).to("allowedValues")
+                .run();
+
+        List<MetaAttribute> updatedAttrs = new java.util.ArrayList<>(existing.attributes());
+        updatedAttrs.add(attr);
+        MetaType updated = new MetaType(typeName, List.copyOf(updatedAttrs), existing.sensitiveFields());
+        typeCache.put(typeName, updated);
+        log.info("Added attribute '{}' to MetaType '{}'", attr.name(), typeName);
+        return updated;
+    }
+
+    /**
+     * Update an existing MetaAttribute on a MetaType in Neo4j and refresh cache.
+     */
+    public synchronized MetaType updateAttribute(String typeName, String attrName, MetaAttribute newAttr) {
+        MetaType existing = typeCache.get(typeName);
+        if (existing == null) throw new UnknownEntityTypeException(typeName);
+
+        boolean exists = existing.attributes().stream().anyMatch(a -> a.name().equals(attrName));
+        if (!exists) throw new IllegalArgumentException(
+                "Attribute '" + attrName + "' not found on type '" + typeName + "'");
+
+        String cypher = """
+                MATCH (mt:MetaType {name: $typeName})-[:HAS_ATTRIBUTE]->(ma:MetaAttribute {name: $attrName})
+                SET ma.dataType      = $dataType,
+                    ma.mandatory     = $mandatory,
+                    ma.min           = $min,
+                    ma.max           = $max,
+                    ma.allowedValues = $allowedValues
+                """;
+        neo4jClient.query(cypher)
+                .bind(typeName).to("typeName")
+                .bind(attrName).to("attrName")
+                .bind(newAttr.dataType()).to("dataType")
+                .bind(newAttr.mandatory()).to("mandatory")
+                .bind(newAttr.min()).to("min")
+                .bind(newAttr.max()).to("max")
+                .bind(newAttr.allowedValues() != null ? newAttr.allowedValues() : List.of()).to("allowedValues")
+                .run();
+
+        List<MetaAttribute> updatedAttrs = existing.attributes().stream()
+                .map(a -> a.name().equals(attrName) ? newAttr : a)
+                .toList();
+        MetaType updated = new MetaType(typeName, updatedAttrs, existing.sensitiveFields());
+        typeCache.put(typeName, updated);
+        log.info("Updated attribute '{}' on MetaType '{}'", attrName, typeName);
+        return updated;
+    }
+
+    /**
+     * Delete a MetaAttribute from a MetaType in Neo4j and update cache.
+     */
+    public synchronized MetaType deleteAttribute(String typeName, String attrName) {
+            MetaType existing = typeCache.get(typeName);
+        if (existing == null) throw new UnknownEntityTypeException(typeName);
+
+        boolean exists = existing.attributes().stream().anyMatch(a -> a.name().equals(attrName));
+        if (!exists) throw new IllegalArgumentException(
+                "Attribute '" + attrName + "' not found on type '" + typeName + "'");
+
+        String cypher = """
+                MATCH (mt:MetaType {name: $typeName})-[r:HAS_ATTRIBUTE]->(ma:MetaAttribute {name: $attrName})
+                DELETE r, ma
+                """;
+        neo4jClient.query(cypher)
+                .bind(typeName).to("typeName")
+                .bind(attrName).to("attrName")
+                .run();
+
+        List<MetaAttribute> updatedAttrs = existing.attributes().stream()
+                .filter(a -> !a.name().equals(attrName))
+                .toList();
+        MetaType updated = new MetaType(typeName, updatedAttrs, existing.sensitiveFields());
+        typeCache.put(typeName, updated);
+        log.info("Deleted attribute '{}' from MetaType '{}'", attrName, typeName);
+        return updated;
+    }
 }
