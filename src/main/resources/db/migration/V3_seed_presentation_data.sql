@@ -377,69 +377,317 @@ INSERT INTO entity_data (id, type, payload, created_at, updated_at) VALUES
 ('40000000-0000-0000-0000-000000000013','InventoryItem','{"name":"All-Purpose Cleaner","sku":"CLN-001","category":"CLEANING","quantity":12,"unit":"l","reorderLevel":4,"unitCost":3.50}','2026-04-22 09:00:00','2026-05-01 09:00:00'),
 ('40000000-0000-0000-0000-000000000014','InventoryItem','{"name":"Disposable Gloves (box)","sku":"CLN-002","category":"CLEANING","quantity":8,"unit":"box","reorderLevel":2,"unitCost":5.80}','2026-04-22 09:00:00','2026-05-01 09:00:00');
 
+-- todo
 -- =============================================================================
 -- 5. SHIFTS  (4/22 – 6/22, 2 shifts/day per store, alternating staff)
 --    Morning 07:00-15:00 / Evening 14:00-22:00
 --    Downtown:  baristas 07/08, cashier 09, supervisor 10
 --    Shevchenko: baristas 12/13, cashier 14/15, supervisor 11
 -- =============================================================================
-
--- Helper: generate shifts for a date range using a series
--- DOWNTOWN shifts (past — COMPLETED; future — SCHEDULED)
 INSERT INTO entity_data (type, payload, created_at, updated_at)
 SELECT
     'Shift',
     jsonb_build_object(
-        'employeeId',      emp_id,
-        'storeLocationId', '10000000-0000-0000-0000-000000000001',
-        'shiftDate',       shift_day::text,
-        'startTime',       start_t,
-        'endTime',         end_t,
-        'shiftStatus',     CASE WHEN shift_day < '2026-05-22' THEN 'COMPLETED' ELSE 'SCHEDULED' END
+            'employeeId',      '20000000-0000-0000-0000-000000000007',
+            'storeLocationId', '10000000-0000-0000-0000-000000000001',
+            'shiftDate',       shift_day:: ,
+            'startTime',       '07:00',
+            'endTime',         '15:00',
+            'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
     ),
-    shift_day + '08:00:00'::time,
-    shift_day + '08:00:00'::time
-FROM (
-    SELECT
-        shift_day,
-        CASE WHEN row_number() OVER (PARTITION BY shift_day ORDER BY slot) % 4 = 1 THEN '20000000-0000-0000-0000-000000000007'
-             WHEN row_number() OVER (PARTITION BY shift_day ORDER BY slot) % 4 = 2 THEN '20000000-0000-0000-0000-000000000008'
-             WHEN row_number() OVER (PARTITION BY shift_day ORDER BY slot) % 4 = 3 THEN '20000000-0000-0000-0000-000000000009'
-             ELSE                                                                        '20000000-0000-0000-0000-000000000010'
-        END AS emp_id,
-        CASE WHEN slot = 1 THEN '07:00' ELSE '14:00' END AS start_t,
-        CASE WHEN slot = 1 THEN '15:00' ELSE '22:00' END AS end_t
-    FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day
-    CROSS JOIN (SELECT 1 AS slot UNION SELECT 2) slots
-) sub;
+    shift_day + '06:00:00'::time,
+    shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day;
 
--- SHEVCHENKO shifts
+-- Morning cashier (07:00–15:00)
 INSERT INTO entity_data (type, payload, created_at, updated_at)
 SELECT
     'Shift',
     jsonb_build_object(
-        'employeeId',      emp_id,
-        'storeLocationId', '10000000-0000-0000-0000-000000000002',
-        'shiftDate',       shift_day::text,
-        'startTime',       start_t,
-        'endTime',         end_t,
-        'shiftStatus',     CASE WHEN shift_day < '2026-05-22' THEN 'COMPLETED' ELSE 'SCHEDULED' END
+            'employeeId',      '20000000-0000-0000-0000-000000000009',
+            'storeLocationId', '10000000-0000-0000-0000-000000000001',
+            'shiftDate',       shift_day::text,
+            'startTime',       '07:00',
+            'endTime',         '15:00',
+            'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
     ),
-    shift_day + '08:00:00'::time,
-    shift_day + '08:00:00'::time
-FROM (
-    SELECT
-        shift_day,
-        CASE WHEN row_number() OVER (PARTITION BY shift_day ORDER BY slot) % 4 = 1 THEN '20000000-0000-0000-0000-000000000012'
-             WHEN row_number() OVER (PARTITION BY shift_day ORDER BY slot) % 4 = 2 THEN '20000000-0000-0000-0000-000000000013'
-             WHEN row_number() OVER (PARTITION BY shift_day ORDER BY slot) % 4 = 3 THEN '20000000-0000-0000-0000-000000000014'
-             ELSE                                                                        '20000000-0000-0000-0000-000000000011'
-        END AS emp_id,
-        CASE WHEN slot = 1 THEN '07:00' ELSE '14:00' END AS start_t,
-        CASE WHEN slot = 1 THEN '15:00' ELSE '22:00' END AS end_t
-    FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day
-    CROSS JOIN (SELECT 1 AS slot UNION SELECT 2) slots
-) sub;
+    shift_day + '06:00:00'::time,
+    shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day;
+
+-- Evening barista (14:00–22:00)
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT
+    'Shift',
+    jsonb_build_object(
+            'employeeId',      '20000000-0000-0000-0000-000000000008',
+            'storeLocationId', '10000000-0000-0000-0000-000000000001',
+            'shiftDate',       shift_day::text,
+            'startTime',       '14:00',
+            'endTime',         '22:00',
+            'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+    ),
+    shift_day + '06:00:00'::time,
+    shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day;
+
+-- Evening supervisor (14:00–22:00)
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT
+    'Shift',
+    jsonb_build_object(
+            'employeeId',      '20000000-0000-0000-0000-000000000010',
+            'storeLocationId', '10000000-0000-0000-0000-000000000001',
+            'shiftDate',       shift_day::text,
+            'startTime',       '14:00',
+            'endTime',         '22:00',
+            'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+    ),
+    shift_day + '06:00:00'::time,
+    shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day;
+
+-- ── SHEVCHENKO ────────────────────────────────────────────────────────────────
+
+-- Morning barista (07:00–15:00)
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT
+    'Shift',
+    jsonb_build_object(
+            'employeeId',      '20000000-0000-0000-0000-000000000012',
+            'storeLocationId', '10000000-0000-0000-0000-000000000002',
+            'shiftDate',       shift_day::text,
+            'startTime',       '07:00',
+            'endTime',         '15:00',
+            'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+    ),
+    shift_day + '06:00:00'::time,
+    shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day;
+
+-- Morning cashier (07:00–15:00)
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT
+    'Shift',
+    jsonb_build_object(
+            'employeeId',      '20000000-0000-0000-0000-000000000014',
+            'storeLocationId', '10000000-0000-0000-0000-000000000002',
+            'shiftDate',       shift_day::text,
+            'startTime',       '07:00',
+            'endTime',         '15:00',
+            'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+    ),
+    shift_day + '06:00:00'::time,
+    shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day;
+
+-- Evening barista (14:00–22:00)
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT
+    'Shift',
+    jsonb_build_object(
+            'employeeId',      '20000000-0000-0000-0000-000000000013',
+            'storeLocationId', '10000000-0000-0000-0000-000000000002',
+            'shiftDate',       shift_day::text,
+            'startTime',       '14:00',
+            'endTime',         '22:00',
+            'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+    ),
+    shift_day + '06:00:00'::time,
+    shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day;
+
+-- Evening supervisor (14:00–22:00)
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT
+    'Shift',
+    jsonb_build_object(
+            'employeeId',      '20000000-0000-0000-0000-000000000011',
+            'storeLocationId', '10000000-0000-0000-0000-000000000002',
+            'shiftDate',       shift_day::text,
+            'startTime',       '14:00',
+            'endTime',         '22:00',
+            'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+    ),
+    shift_day + '06:00:00'::time,
+    shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-06-22'::date, '1 day'::interval) AS shift_day;
+
+
+-- ── DOWNTOWN STORE ────────────────────────────────────────────────────────────
+
+-- Andriy Kovalenko (OWNER) — hireDate 2024-01-01, Mon–Fri 09:00–17:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000001',
+               'storeLocationId', '10000000-0000-0000-0000-000000000001',
+               'shiftDate',       shift_day::text,
+               'startTime',       '09:00',
+               'endTime',         '17:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '08:00:00'::time,
+       shift_day + '08:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day
+WHERE EXTRACT(DOW FROM shift_day) BETWEEN 1 AND 5;  -- Mon–Fri
+
+-- Dmytro Bondarenko (IT_SPECIALIST) — hireDate 2024-03-15, Mon–Fri 09:00–17:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000002',
+               'storeLocationId', '10000000-0000-0000-0000-000000000001',
+               'shiftDate',       shift_day::text,
+               'startTime',       '09:00',
+               'endTime',         '17:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '08:00:00'::time,
+       shift_day + '08:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day
+WHERE EXTRACT(DOW FROM shift_day) BETWEEN 1 AND 5;
+
+-- Olena Marchenko (MANAGER Downtown) — hireDate 2024-06-01, Mon–Sat 08:00–16:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000003',
+               'storeLocationId', '10000000-0000-0000-0000-000000000001',
+               'shiftDate',       shift_day::text,
+               'startTime',       '08:00',
+               'endTime',         '16:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '07:00:00'::time,
+       shift_day + '07:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day
+WHERE EXTRACT(DOW FROM shift_day) BETWEEN 1 AND 6;  -- Mon–Sat
+
+-- Iryna Lysenko (HR) — hireDate 2024-08-10, Mon–Fri 09:00–17:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000004',
+               'storeLocationId', '10000000-0000-0000-0000-000000000001',
+               'shiftDate',       shift_day::text,
+               'startTime',       '09:00',
+               'endTime',         '17:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '08:00:00'::time,
+       shift_day + '08:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day
+WHERE EXTRACT(DOW FROM shift_day) BETWEEN 1 AND 5;
+
+-- Vasyl Petrenko (ACCOUNTANT) — hireDate 2024-09-01, Mon–Fri 09:00–17:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000005',
+               'storeLocationId', '10000000-0000-0000-0000-000000000001',
+               'shiftDate',       shift_day::text,
+               'startTime',       '09:00',
+               'endTime',         '17:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '08:00:00'::time,
+       shift_day + '08:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day
+WHERE EXTRACT(DOW FROM shift_day) BETWEEN 1 AND 5;
+
+-- ── SHEVCHENKO STORE ──────────────────────────────────────────────────────────
+
+-- Natalia Bondar (MANAGER Shevchenko) — hireDate 2024-07-01, Mon–Sat 08:00–16:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000006',
+               'storeLocationId', '10000000-0000-0000-0000-000000000002',
+               'shiftDate',       shift_day::text,
+               'startTime',       '08:00',
+               'endTime',         '16:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '07:00:00'::time,
+       shift_day + '07:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day
+WHERE EXTRACT(DOW FROM shift_day) BETWEEN 1 AND 6;
+
+-- Bohdan Rudenko (SUPERVISOR Shevchenko) — hireDate 2025-02-01, daily 14:00–22:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000011',
+               'storeLocationId', '10000000-0000-0000-0000-000000000002',
+               'shiftDate',       shift_day::text,
+               'startTime',       '14:00',
+               'endTime',         '22:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '06:00:00'::time,
+       shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day;
+
+-- Anastasiia Moroz (BARISTA Shevchenko) — hireDate 2025-04-01, daily 07:00–15:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000012',
+               'storeLocationId', '10000000-0000-0000-0000-000000000002',
+               'shiftDate',       shift_day::text,
+               'startTime',       '07:00',
+               'endTime',         '15:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '06:00:00'::time,
+       shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day;
+
+-- Pavlo Shevchenko (BARISTA Shevchenko) — hireDate 2025-06-15, daily 14:00–22:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000013',
+               'storeLocationId', '10000000-0000-0000-0000-000000000002',
+               'shiftDate',       shift_day::text,
+               'startTime',       '14:00',
+               'endTime',         '22:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '06:00:00'::time,
+       shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day;
+
+-- Yuliia Karpenko (CASHIER Shevchenko) — hireDate 2025-07-01, daily 07:00–15:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000014',
+               'storeLocationId', '10000000-0000-0000-0000-000000000002',
+               'shiftDate',       shift_day::text,
+               'startTime',       '07:00',
+               'endTime',         '15:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '06:00:00'::time,
+       shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day;
+
+-- Oleksandr Tymchenko (CASHIER Shevchenko) — hireDate 2025-08-20, daily 14:00–22:00
+INSERT INTO entity_data (type, payload, created_at, updated_at)
+SELECT 'Shift',
+       jsonb_build_object(
+               'employeeId',      '20000000-0000-0000-0000-000000000015',
+               'storeLocationId', '10000000-0000-0000-0000-000000000002',
+               'shiftDate',       shift_day::text,
+               'startTime',       '14:00',
+               'endTime',         '22:00',
+               'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
+       ),
+       shift_day + '06:00:00'::time,
+       shift_day + '06:00:00'::time
+FROM generate_series('2026-04-22'::date, '2026-07-06'::date, '1 day'::interval) AS shift_day;
 
 -- =============================================================================
 -- 6. LEAVE REQUESTS  (various statuses)
