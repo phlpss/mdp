@@ -11,6 +11,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -179,6 +180,11 @@ public class GenericEntityService {
         return entityDataRepository
                 .findByTypeAndPayloadField(type, fieldName, fieldValue, pageable)
                 .map(entity -> applyFieldMask(type, entity, caller));
+    }
+
+    public Optional<EntityData> findByPayloadField(UUID id, String fieldName) {
+        UUID resultId = entityDataRepository.extractPayloadField(id, fieldName);
+        return entityDataRepository.findById(resultId);
     }
 
     /**

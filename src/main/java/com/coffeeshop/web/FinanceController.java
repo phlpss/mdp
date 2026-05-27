@@ -59,8 +59,8 @@ public class FinanceController {
             @RequestBody JsonNode body,
             @AuthenticationPrincipal UserPrincipal caller) {
 
-        String storeLocationId = body.get("storeLocationId").asText();
-        String date = body.get("date").asText();
+        String storeLocationId = body.get("storeLocationId").asString();
+        String date = body.get("date").asString();
         double actualTotal = body.get("actualTotal").asDouble();
 
         log.info("Closing report: store={}, date={}, actualTotal={}, submittedBy={}",
