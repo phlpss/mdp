@@ -31,12 +31,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class EmployeeLeaveController {
 
-    private static final String EMP_TYPE = "Employee";
-
-    private final GenericEntityService genericEntityService;
-    private final ObjectMapper objectMapper;
-    private final GenericEntityService entityService;
+    private static final String EMP_TYPE   = "Employee";
     private static final String LEAVE_TYPE = "LeaveRequest";
+
+    private final GenericEntityService entityService;
+    private final ObjectMapper objectMapper;
 
     /**
      * GET /api/v1/leaves/my/balance
@@ -51,26 +50,30 @@ public class EmployeeLeaveController {
 
         log.debug("GET /api/v1/leaves/my/balance - caller={}", caller.getUsername());
 
-        int ptoTotal     = 20;
-        int sickTotal    = 10;
-        int holidayTotal = 5;
-
-        int ptoUsed = 0, sickUsed = 0, holidayUsed = 0;
+        int ptoBalance     = 0;
+        int sickBalance    = 0;
+        int holidayBalance = 0;
+        int ptoTotal       = 0;
+        int sickTotal      = 0;
+        int holidayTotal   = 0;
 
         try {
-            EntityData empData = genericEntityService.findById(EMP_TYPE, caller.getUserId(), caller);
+            EntityData empData = entityService.findById(EMP_TYPE, caller.getUserId(), caller);
             JsonNode p = empData.getPayload();
-            ptoUsed     = ptoTotal     - p.path("ptoBalance").asInt(ptoTotal);
-            sickUsed    = sickTotal    - p.path("sickBalance").asInt(sickTotal);
-            holidayUsed = holidayTotal - p.path("holidayBalance").asInt(holidayTotal);
+            ptoBalance     = p.path("ptoBalance").asInt(0);
+            sickBalance    = p.path("sickBalance").asInt(0);
+            holidayBalance = p.path("holidayBalance").asInt(0);
+            ptoTotal       = p.path("ptoTotal").asInt(ptoBalance);
+            sickTotal      = p.path("sickTotal").asInt(sickBalance);
+            holidayTotal   = p.path("holidayTotal").asInt(holidayBalance);
         } catch (Exception e) {
             log.debug("No Employee record found for {}; returning default balances", caller.getUsername());
         }
 
         ArrayNode result = objectMapper.createArrayNode();
-        result.add(balanceNode("Annual",  ptoUsed,     ptoTotal));
-        result.add(balanceNode("Sick",    sickUsed,    sickTotal));
-        result.add(balanceNode("Holiday", holidayUsed, holidayTotal));
+        result.add(balanceNode("Annual",  ptoTotal  - ptoBalance,     ptoTotal));
+        result.add(balanceNode("Sick",    sickTotal - sickBalance,    sickTotal));
+        result.add(balanceNode("Holiday", holidayTotal - holidayBalance, holidayTotal));
 
         return ResponseEntity.ok(result);
     }
