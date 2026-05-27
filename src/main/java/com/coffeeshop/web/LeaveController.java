@@ -347,7 +347,7 @@ public class LeaveController {
             @AuthenticationPrincipal UserPrincipal caller) {
 
         EntityData entity = entityService.findById(LEAVE_TYPE, id, caller);
-        JsonNode payload = parsePayload(entity);
+        JsonNode payload = entity.getPayload();
 
         boolean isOwner = caller.getUserId().toString()
                 .equals(payload.path("employeeId").asString());

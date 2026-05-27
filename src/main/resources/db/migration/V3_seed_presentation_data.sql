@@ -154,7 +154,7 @@ INSERT INTO entity_data (id, type, payload, created_at, updated_at) VALUES (
         "hireDate":       "2025-01-15",
         "isActive":       true,
         "locationId":     "10000000-0000-0000-0000-000000000001",
-        "ptoBalance":     15,
+        "ptoBalance":     10,
         "sickBalance":    8,
         "holidayBalance": 8
     }',
@@ -174,7 +174,7 @@ INSERT INTO entity_data (id, type, payload, created_at, updated_at) VALUES (
         "isActive":       true,
         "locationId":     "10000000-0000-0000-0000-000000000001",
         "ptoBalance":     14,
-        "sickBalance":    8,
+        "sickBalance":    5,
         "holidayBalance": 8
     }',
     '2026-04-22 08:00:00', '2026-04-22 08:00:00'
@@ -390,7 +390,7 @@ SELECT
     jsonb_build_object(
             'employeeId',      '20000000-0000-0000-0000-000000000007',
             'storeLocationId', '10000000-0000-0000-0000-000000000001',
-            'shiftDate',       shift_day:: ,
+            'shiftDate',       shift_day::text,
             'startTime',       '07:00',
             'endTime',         '15:00',
             'shiftStatus',     CASE WHEN shift_day < CURRENT_DATE THEN 'COMPLETED' ELSE 'SCHEDULED' END
