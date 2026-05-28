@@ -458,9 +458,9 @@ public class LeaveController {
         LocalDate start = LocalDate.parse(startStr, DateTimeFormatter.ISO_LOCAL_DATE);
         LocalDate end = LocalDate.parse(endStr, DateTimeFormatter.ISO_LOCAL_DATE);
 
-        if (!end.isAfter(start)) {
+        if (end.isBefore(start)) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
-                    "endDate must be after startDate");
+                    "endDate cannot be before startDate");
         }
         if (start.isBefore(LocalDate.now())) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,

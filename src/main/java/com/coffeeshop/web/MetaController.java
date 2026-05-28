@@ -128,14 +128,7 @@ public class MetaController {
             @RequestBody JsonNode body) {
         log.info("PUT /api/v1/meta/types/{}/attributes/{}", typeName, attrName);
         try {
-            MetaAttribute attr = new MetaAttribute(
-                    attrName,
-                    body.path("dataType").asString("STRING"),
-                    body.path("mandatory").asBoolean(false),
-                    body.path("min").isNull() || body.path("min").isMissingNode() ? null : body.path("min").asInt(),
-                    body.path("max").isNull() || body.path("max").isMissingNode() ? null : body.path("max").asInt(),
-                    toStringList(body.path("allowedValues"))
-            );
+            MetaAttribute attr = parseAttribute(body, attrName);
             MetaType updated = metadataCacheService.updateAttribute(typeName, attrName, attr);
             return ResponseEntity.ok(updated);
         } catch (UnknownEntityTypeException e) {
@@ -167,13 +160,28 @@ public class MetaController {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private MetaAttribute parseAttribute(JsonNode body) {
+        return parseAttribute(body, body.path("name").asString());
+    }
+
+    private MetaAttribute parseAttribute(JsonNode body, String name) {
         return new MetaAttribute(
-                body.path("name").asString(),
+                name,
+                body.path("label").asString(name),
                 body.path("dataType").asString("STRING"),
                 body.path("mandatory").asBoolean(false),
+                body.path("sensitive").asBoolean(false),
+                body.path("sortable").asBoolean(true),
+                body.path("filterable").asBoolean(false),
+                body.path("showInList").asBoolean(false),
+                body.path("showInForm").asBoolean(true),
+                body.path("readOnly").asBoolean(false),
                 body.path("min").isNull() || body.path("min").isMissingNode() ? null : body.path("min").asInt(),
                 body.path("max").isNull() || body.path("max").isMissingNode() ? null : body.path("max").asInt(),
-                toStringList(body.path("allowedValues"))
+                toStringList(body.path("allowedValues")),
+                body.path("placeholder").isNull() || body.path("placeholder").isMissingNode() ? null : body.path("placeholder").asString(),
+                body.path("hint").isNull() || body.path("hint").isMissingNode() ? null : body.path("hint").asString(),
+                body.path("order").isNull() || body.path("order").isMissingNode() ? 99 : body.path("order").asInt(),
+                body.path("group").isNull() || body.path("group").isMissingNode() ? null : body.path("group").asString()
         );
     }
 

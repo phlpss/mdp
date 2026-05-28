@@ -89,11 +89,22 @@ public class MetadataCacheService {
                        mt.sensitiveFields AS sensitiveFields,
                        collect({
                            name:          ma.name,
+                           label:         ma.label,
                            dataType:      ma.dataType,
                            mandatory:     ma.mandatory,
+                           sensitive:     ma.sensitive,
+                           sortable:      ma.sortable,
+                           filterable:    ma.filterable,
+                           showInList:    ma.showInList,
+                           showInForm:    ma.showInForm,
+                           readOnly:      ma.readOnly,
                            min:           ma.min,
                            max:           ma.max,
-                           allowedValues: ma.allowedValues
+                           allowedValues: ma.allowedValues,
+                           placeholder:   ma.placeholder,
+                           hint:          ma.hint,
+                           order:         ma.order,
+                           group:         ma.group
                        }) AS attributes
                 """;
 
@@ -110,11 +121,22 @@ public class MetadataCacheService {
                     .filter(a -> a.get("name") != null)
                     .map(a -> new MetaAttribute(
                             (String) a.get("name"),
+                            (String) a.getOrDefault("label", a.get("name")),
                             (String) a.get("dataType"),
                             Boolean.TRUE.equals(a.get("mandatory")),
+                            Boolean.TRUE.equals(a.get("sensitive")),
+                            !Boolean.FALSE.equals(a.get("sortable")),
+                            Boolean.TRUE.equals(a.get("filterable")),
+                            Boolean.TRUE.equals(a.get("showInList")),
+                            !Boolean.FALSE.equals(a.get("showInForm")),
+                            Boolean.TRUE.equals(a.get("readOnly")),
                             toInteger(a.get("min")),
                             toInteger(a.get("max")),
-                            toStringList(a.get("allowedValues"))))
+                            toStringList(a.get("allowedValues")),
+                            (String) a.get("placeholder"),
+                            (String) a.get("hint"),
+                            toInteger(a.get("order")) != null ? toInteger(a.get("order")) : 99,
+                            (String) a.get("group")))
                     .toList();
 
             typeCache.put(typeName, new MetaType(typeName, attributes, sensitiveFields));
@@ -277,22 +299,44 @@ public class MetadataCacheService {
                 MATCH (mt:MetaType {name: $typeName})
                 CREATE (ma:MetaAttribute {
                     name:          $attrName,
+                    label:         $label,
                     dataType:      $dataType,
                     mandatory:     $mandatory,
+                    sensitive:     $sensitive,
+                    sortable:      $sortable,
+                    filterable:    $filterable,
+                    showInList:    $showInList,
+                    showInForm:    $showInForm,
+                    readOnly:      $readOnly,
                     min:           $min,
                     max:           $max,
-                    allowedValues: $allowedValues
+                    allowedValues: $allowedValues,
+                    placeholder:   $placeholder,
+                    hint:          $hint,
+                    order:         $order,
+                    group:         $group
                 })
                 CREATE (mt)-[:HAS_ATTRIBUTE]->(ma)
                 """;
         neo4jClient.query(cypher)
                 .bind(typeName).to("typeName")
                 .bind(attr.name()).to("attrName")
+                .bind(attr.label()).to("label")
                 .bind(attr.dataType()).to("dataType")
                 .bind(attr.mandatory()).to("mandatory")
+                .bind(attr.sensitive()).to("sensitive")
+                .bind(attr.sortable()).to("sortable")
+                .bind(attr.filterable()).to("filterable")
+                .bind(attr.showInList()).to("showInList")
+                .bind(attr.showInForm()).to("showInForm")
+                .bind(attr.readOnly()).to("readOnly")
                 .bind(attr.min()).to("min")
                 .bind(attr.max()).to("max")
                 .bind(attr.allowedValues() != null ? attr.allowedValues() : List.of()).to("allowedValues")
+                .bind(attr.placeholder()).to("placeholder")
+                .bind(attr.hint()).to("hint")
+                .bind(attr.order()).to("order")
+                .bind(attr.group()).to("group")
                 .run();
 
         List<MetaAttribute> updatedAttrs = new java.util.ArrayList<>(existing.attributes());
@@ -316,20 +360,42 @@ public class MetadataCacheService {
 
         String cypher = """
                 MATCH (mt:MetaType {name: $typeName})-[:HAS_ATTRIBUTE]->(ma:MetaAttribute {name: $attrName})
-                SET ma.dataType      = $dataType,
+                SET ma.label         = $label,
+                    ma.dataType      = $dataType,
                     ma.mandatory     = $mandatory,
+                    ma.sensitive     = $sensitive,
+                    ma.sortable      = $sortable,
+                    ma.filterable    = $filterable,
+                    ma.showInList    = $showInList,
+                    ma.showInForm    = $showInForm,
+                    ma.readOnly      = $readOnly,
                     ma.min           = $min,
                     ma.max           = $max,
-                    ma.allowedValues = $allowedValues
+                    ma.allowedValues = $allowedValues,
+                    ma.placeholder   = $placeholder,
+                    ma.hint          = $hint,
+                    ma.order         = $order,
+                    ma.group         = $group
                 """;
         neo4jClient.query(cypher)
                 .bind(typeName).to("typeName")
                 .bind(attrName).to("attrName")
+                .bind(newAttr.label()).to("label")
                 .bind(newAttr.dataType()).to("dataType")
                 .bind(newAttr.mandatory()).to("mandatory")
+                .bind(newAttr.sensitive()).to("sensitive")
+                .bind(newAttr.sortable()).to("sortable")
+                .bind(newAttr.filterable()).to("filterable")
+                .bind(newAttr.showInList()).to("showInList")
+                .bind(newAttr.showInForm()).to("showInForm")
+                .bind(newAttr.readOnly()).to("readOnly")
                 .bind(newAttr.min()).to("min")
                 .bind(newAttr.max()).to("max")
                 .bind(newAttr.allowedValues() != null ? newAttr.allowedValues() : List.of()).to("allowedValues")
+                .bind(newAttr.placeholder()).to("placeholder")
+                .bind(newAttr.hint()).to("hint")
+                .bind(newAttr.order()).to("order")
+                .bind(newAttr.group()).to("group")
                 .run();
 
         List<MetaAttribute> updatedAttrs = existing.attributes().stream()
