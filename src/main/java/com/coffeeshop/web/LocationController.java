@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -58,8 +59,7 @@ public class LocationController {
     public ResponseEntity<EntityData> getUserLocation(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal caller) {
-        Page<EntityData> location = genericEntityService.findByPayloadField(
-                LOCATION_TYPE, "employeeId", id.toString(), null, caller);
-        return ResponseEntity.ok(location.getContent().getFirst());
+        Optional<EntityData> location = genericEntityService.findByPayloadField(id, "locationId");
+        return ResponseEntity.ok(location.get());
     }
 }

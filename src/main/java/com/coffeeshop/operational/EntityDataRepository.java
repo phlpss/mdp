@@ -26,27 +26,23 @@ public interface EntityDataRepository extends JpaRepository<EntityData, UUID> {
      */
     EntityData findByTypeAndId(String type, UUID id);
 
-    /**
-     * Filters by type and a single JSONB payload field equality.
-     * Uses PostgreSQL's ->> operator for text extraction.
-     * Example: findByTypeAndPayloadField("LeaveRequest", "employeeId", "uuid-value")
-     */
     @Query(value = """
-            SELECT * FROM entity_data
-            WHERE type = :type
-              AND payload ->> :fieldName = :fieldValue
-            """,
+    SELECT * FROM entity_data
+    WHERE jsonb_extract_path_text(payload, :fieldName) = :fieldValue
+    """,
             countQuery = """
-                    SELECT COUNT(*) FROM entity_data
-                    WHERE type = :type
-                      AND payload ->> :fieldName = :fieldValue
-                    """,
+            SELECT COUNT(*) FROM entity_data
+            WHERE jsonb_extract_path_text(payload, :fieldName) = :fieldValue
+            """,
             nativeQuery = true)
     Page<EntityData> findByTypeAndPayloadField(
             @Param("type") String type,
             @Param("fieldName") String fieldName,
             @Param("fieldValue") String fieldValue,
             Pageable pageable);
+
+    @Query(value = "SELECT payload ->> :fieldName FROM entity_data WHERE id = :id", nativeQuery = true)
+    UUID extractPayloadField(@Param("id") UUID id, @Param("fieldName") String fieldName);
 
     @Query(value = """
             SELECT * FROM entity_data

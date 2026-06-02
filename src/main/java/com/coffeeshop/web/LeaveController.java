@@ -234,7 +234,7 @@ public class LeaveController {
      * Body: { "reason": "Plans changed" }
      */
     @PostMapping("/{id}/retract")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('HR_MANAGER', 'STORE_MANAGER', 'SHIFT_SUPERVISOR')")
     public ResponseEntity<EntityData> retractApprovedRequest(
             @PathVariable UUID id,
             @RequestBody(required = false) JsonNode body,
