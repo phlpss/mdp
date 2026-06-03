@@ -56,10 +56,10 @@ public class HrController {
     private final GeneralService generalService;
     private final PasswordEncoder passwordEncoder;
     /**
-     +     * POST /api/v1/hr/employees
-     +     * Creates an Employee entity and a linked User account atomically.
-     +     * Request body: employee payload + "password" field (plain text, hashed here).
-     +     */
+     * POST /api/v1/hr/employees
+     * Creates an Employee entity and a linked User account atomically.
+     * Request body: employee payload + "password" field (plain text, hashed here).
+     */
     @PostMapping("/employees")
     @PreAuthorize("hasAnyRole('HR_MANAGER', 'IT_SPECIALIST')")
     public ResponseEntity<EntityData> createEmployee(@RequestBody JsonNode body, @AuthenticationPrincipal UserPrincipal caller) {
