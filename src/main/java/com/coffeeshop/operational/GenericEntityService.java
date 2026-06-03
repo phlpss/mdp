@@ -57,6 +57,12 @@ public class GenericEntityService {
     public EntityData create(String type, JsonNode payload, UserPrincipal caller) {
         log.info("Creating entity of type '{}' by user: {}", type, caller.getUsername());
 
+        if ("Employee".equals(type) && payload instanceof ObjectNode emp) {
+            if (!emp.has("ptoBalance") || emp.get("ptoBalance").isNull()) emp.put("ptoBalance", 20);
+            if (!emp.has("sickBalance") || emp.get("sickBalance").isNull()) emp.put("sickBalance", 10);
+            if (!emp.has("holidayBalance") || emp.get("holidayBalance").isNull()) emp.put("holidayBalance", 10);
+        }
+
         validationEngineService.validate(type, payload);
 
         EntityData entity = EntityData.builder().type(type).payload(payload).build();

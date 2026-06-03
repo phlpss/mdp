@@ -91,7 +91,7 @@ public class HrController {
         String locId = employeePayload.path("storeLocationId").asString(null);
         if (locId != null) userPayload.put("storeLocationId", locId);
 
-        entityDataRepository.save(EntityData.builder().type("User").payload(userPayload).build());
+        entityService.create("User", userPayload, caller);
         log.info("User created: employeeId={}, username={}", employee.getId(), username);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(employee);
