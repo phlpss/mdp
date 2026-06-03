@@ -4,9 +4,12 @@ import com.coffeeshop.exception.EntityNotFoundException;
 import com.coffeeshop.exception.IdempotencyConflictException;
 import com.coffeeshop.exception.UnknownEntityTypeException;
 import com.coffeeshop.exception.ValidationException;
+import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -218,6 +221,15 @@ public class GlobalExceptionHandler {
         response.put("exceptionType", ex.getClass().getSimpleName());
 
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", ex.getStatusCode().toString());
+        response.put("message", ex.getReason());
+        response.put("status", ex.getStatusCode().value());
+        return new ResponseEntity<>(response, ex.getStatusCode());
     }
 }
 
