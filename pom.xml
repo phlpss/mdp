@@ -151,6 +151,21 @@
                 <artifactId>hibernate-core</artifactId>
                 <version>7.3.0.Final</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy</artifactId>
+                <version>4.0.22</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy-xml</artifactId>
+                <version>4.0.22</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy-json</artifactId>
+                <version>4.0.22</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
