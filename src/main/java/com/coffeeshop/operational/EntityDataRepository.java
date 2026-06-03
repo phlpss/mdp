@@ -27,13 +27,15 @@ public interface EntityDataRepository extends JpaRepository<EntityData, UUID> {
     EntityData findByTypeAndId(String type, UUID id);
 
     @Query(value = """
-    SELECT * FROM entity_data
-    WHERE jsonb_extract_path_text(payload, :fieldName) = :fieldValue
-    """,
+        SELECT * FROM entity_data
+        WHERE type = :type
+          AND payload ->> :fieldName = :fieldValue
+        """,
             countQuery = """
-            SELECT COUNT(*) FROM entity_data
-            WHERE jsonb_extract_path_text(payload, :fieldName) = :fieldValue
-            """,
+        SELECT COUNT(*) FROM entity_data
+        WHERE type = :type
+          AND payload ->> :fieldName = :fieldValue
+        """,
             nativeQuery = true)
     Page<EntityData> findByTypeAndPayloadField(
             @Param("type") String type,
