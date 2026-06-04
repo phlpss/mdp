@@ -50,13 +50,22 @@ public class EmployeeShiftController {
         log.debug("GET /api/v1/shifts/my/upcoming - caller={}", caller.getUsername());
 
         List<EntityData> shifts = genericEntityService
-                .findByPayloadField(
+                .findByPayloadFieldInDateRange(
                         SHIFT_TYPE,
                         "employeeId",
                         caller.getUserId().toString(),
-                        PageRequest.of(0, 20),
+                        "shiftDate",
+                        LocalDate.now(),
+                        LocalDate.now().plusDays(60),
+                        PageRequest.of(0, 100),   // covers ~3 months of daily shifts
                         caller)
-                .getContent();
+                .getContent()
+                .stream()
+                .filter(e -> {
+                    String s = e.getPayload().path("shiftStatus").asText("");
+                    return !s.equals("COMPLETED") && !s.equals("CANCELLED");
+                })
+                .toList();
 
         return ResponseEntity.ok(shifts);
     }
