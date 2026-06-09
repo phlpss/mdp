@@ -158,7 +158,7 @@ public class GlobalExceptionHandler {
         String requestId = UUID.randomUUID().toString();
         MDC.put("requestId", requestId);
 
-        log.warn("Access denied: {}", ex.getMessage());
+        log.warn("Access denied: {}, role: {}, requested access: {}", ex.getMessage(), request.getUserPrincipal(), request.getDescription(false));
 
         ObjectNode response = objectMapper.createObjectNode();
         response.put("error", "FORBIDDEN");
