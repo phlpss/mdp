@@ -73,7 +73,7 @@ public class GeneralService {
                         EMPLOYEE_TYPE, UUID.fromString(employeeId), caller);
                 JsonNode ep = parsePayload(emp);
                 employeeFullName = ep.path("fullName").asString("Unknown");
-                employeePosition = ep.path("position").asString("Unknown");
+                employeePosition = ep.path("role").asString("Unknown");
             } catch (EntityNotFoundException e) {
                 log.warn("Employee not found for shift {}: employeeId={}", shift.getId(), employeeId);
             }
