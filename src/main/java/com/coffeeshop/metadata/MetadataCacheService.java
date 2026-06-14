@@ -85,6 +85,7 @@ public class MetadataCacheService {
         String cypher = """
                 MATCH (mt:MetaType)
                 OPTIONAL MATCH (mt)-[:HAS_ATTRIBUTE]->(ma:MetaAttribute)
+                WITH mt, ma ORDER BY ma.order, ma.name
                 RETURN mt.name AS typeName,
                        mt.sensitiveFields AS sensitiveFields,
                        collect({
