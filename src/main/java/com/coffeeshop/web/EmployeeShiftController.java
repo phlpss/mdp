@@ -62,7 +62,7 @@ public class EmployeeShiftController {
                 .getContent()
                 .stream()
                 .filter(e -> {
-                    String s = e.getPayload().path("shiftStatus").asText("");
+                    String s = e.getPayload().path("shiftStatus").asString("");
                     return !s.equals("COMPLETED") && !s.equals("CANCELLED");
                 })
                 .toList();
