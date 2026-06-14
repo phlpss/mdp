@@ -110,5 +110,21 @@ public interface EntityDataRepository extends JpaRepository<EntityData, UUID> {
             @Param("startDate")  LocalDate startDate,
             @Param("endDate")    LocalDate endDate,
             Pageable pageable);
+
+    @Query(value = """
+        SELECT * FROM entity_data
+        WHERE type = :type
+          AND payload @> CAST(:filterJson AS jsonb)
+        """,
+            countQuery = """
+        SELECT count(*) FROM entity_data
+        WHERE type = :type
+          AND payload @> CAST(:filterJson AS jsonb)
+        """,
+            nativeQuery = true)
+    Page<EntityData> findByTypeAndPayloadContains(
+            @Param("type") String type,
+            @Param("filterJson") String filterJson,
+            Pageable pageable);
 }
 

@@ -6,11 +6,14 @@ import com.coffeeshop.metadata.MetadataCacheService;
 import com.coffeeshop.security.Role;
 import com.coffeeshop.security.UserPrincipal;
 import com.coffeeshop.validation.ValidationEngineService;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -158,6 +161,23 @@ public class GenericEntityService {
 
 //        todo
 //        pubSubPublisherService.publishEntityEvent("DELETED", type, id, entity.getPayload());
+    }
+
+    /**
+     * Returns a page of entities of {type}, filtered by an arbitrary set of
+     * exact-match payload fields (payload ->> key = value). Empty filter = findByType.
+     */
+    public Page<EntityData> findAll(String type, Map<String, String> filters,
+                                    Pageable pageable, UserPrincipal caller) {
+        if (filters == null || filters.isEmpty()) {
+            return findAll(type, pageable, caller);
+        }
+        try {
+            String json = objectMapper.writeValueAsString(filters);
+            return entityDataRepository.findByTypeAndPayloadContains(type, json, pageable);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid filter");
+        }
     }
 
     /**

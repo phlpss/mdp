@@ -7,6 +7,9 @@ import com.coffeeshop.security.UserPrincipal;
 import org.springframework.web.bind.annotation.*;
 import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.JsonNode;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -88,25 +91,18 @@ public class GenericEntityController {
         return response;
     }
 
-    /**
-     * Retrieve paginated entities of a given type.
-     *
-     * Supports sorting and pagination via standard Spring parameters:
-     * - ?page=0&size=20
-     * - ?sort=createdAt,desc
-     *
-     * @param type Entity type name
-     * @param pageable Pagination parameters
-     * @param caller Authenticated user
-     * @return Paginated list of entities
-     */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<EntityData>> findAll(@PathVariable String type, Pageable pageable, @AuthenticationPrincipal UserPrincipal caller) {
+    public ResponseEntity<Page<EntityData>> findAll(
+            @PathVariable String type,
+            @RequestParam Map<String, String> allParams,
+            Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal caller) {
 
-        log.debug("GET /api/v1/entities/{} - page: {}, size: {}", type, pageable.getPageNumber(), pageable.getPageSize());
+        Map<String, String> filters = new HashMap<>(allParams);
+        filters.remove("page"); filters.remove("size"); filters.remove("sort");
 
-        Page<EntityData> page = genericEntityService.findAll(type, pageable, caller);
+        Page<EntityData> page = genericEntityService.findAll(type, filters, pageable, caller);
         return ResponseEntity.ok(page);
     }
 
