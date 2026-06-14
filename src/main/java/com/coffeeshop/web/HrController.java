@@ -154,6 +154,90 @@ public class HrController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Edit a shift (only while still SCHEDULED)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * PUT /api/v1/hr/shifts/{id}
+     * Edit date/time/breaks of a SCHEDULED shift. Cannot edit ACTIVE/COMPLETED/CANCELLED.
+     * Access: SHIFT_SUPERVISOR, STORE_MANAGER, HR_MANAGER
+     */
+    @PutMapping("/shifts/{id}")
+    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER', 'HR_MANAGER', 'IT_SPECIALIST')")
+    public ResponseEntity<EntityData> editShift(
+            @PathVariable UUID id,
+            @RequestBody JsonNode body,
+            @AuthenticationPrincipal UserPrincipal caller) {
+
+        EntityData shiftData = entityService.findById(SHIFT_TYPE, id, caller);
+        ObjectNode current = (ObjectNode) generalService.parsePayload(shiftData);
+
+        String status = current.path("shiftStatus").asString();
+        if (!"SCHEDULED".equals(status)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Only SCHEDULED shifts can be edited (current status: " + status + ")");
+        }
+
+        generalService.enforceLocationScope(caller, current.path("storeLocationId").asString());
+
+        String shiftDate = body.hasNonNull("shiftDate")
+                ? body.get("shiftDate").asString() : current.path("shiftDate").asString();
+
+        // Re-check overlap against the (possibly new) date, excluding this shift itself
+        generalService.validateNoShiftConflict(current.path("employeeId").asString(), shiftDate, caller);
+
+        if (body.hasNonNull("shiftDate"))        current.put("shiftDate", shiftDate);
+        if (body.hasNonNull("startTime"))        current.put("startTime", body.get("startTime").asString());
+        if (body.hasNonNull("endTime"))          current.put("endTime", body.get("endTime").asString());
+        if (body.hasNonNull("mealBreakMinutes")) current.put("mealBreakMinutes", body.get("mealBreakMinutes").asInt());
+        if (body.hasNonNull("restBreakMinutes")) current.put("restBreakMinutes", body.get("restBreakMinutes").asInt());
+
+        return ResponseEntity.ok(entityService.update(SHIFT_TYPE, id, current, caller));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Renew (reactivate) a cancelled, upcoming shift  →  CANCELLED back to SCHEDULED
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * PATCH /api/v1/hr/shifts/{id}/renew
+     * Restores a CANCELLED shift to SCHEDULED — only if the shift date is today or later.
+     * Access: SHIFT_SUPERVISOR, STORE_MANAGER, HR_MANAGER
+     */
+    @PatchMapping("/shifts/{id}/renew")
+    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER', 'HR_MANAGER', 'IT_SPECIALIST')")
+    public ResponseEntity<EntityData> renewShift(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal caller) {
+
+        EntityData shiftData = entityService.findById(SHIFT_TYPE, id, caller);
+        ObjectNode current = (ObjectNode) generalService.parsePayload(shiftData);
+
+        String status = current.path("shiftStatus").asString();
+        if (!"CANCELLED".equals(status)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Only CANCELLED shifts can be renewed (current status: " + status + ")");
+        }
+
+        // Feature 2: only upcoming shifts may be renewed
+        String shiftDate = current.path("shiftDate").asString();
+        if (LocalDate.parse(shiftDate.substring(0, 10)).isBefore(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Only upcoming shifts can be renewed (shift date " + shiftDate + " is in the past)");
+        }
+
+        generalService.enforceLocationScope(caller, current.path("storeLocationId").asString());
+
+        // Re-validate no conflict was created in the meantime
+        generalService.validateNoShiftConflict(current.path("employeeId").asString(), shiftDate, caller);
+
+        current.put("shiftStatus", "SCHEDULED");
+        current.putNull("clockInTime");
+        current.putNull("clockOutTime");
+        return ResponseEntity.ok(entityService.update(SHIFT_TYPE, id, current, caller));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Clock-in  →  shiftStatus: ACTIVE
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -353,7 +437,7 @@ public class HrController {
      * Access: SHIFT_SUPERVISOR, STORE_MANAGER, HR_MANAGER
      */
     @PatchMapping("/shifts/{id}/cancel")
-    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER', 'HR_MANAGER')")
+    @PreAuthorize("hasAnyRole('SHIFT_SUPERVISOR', 'STORE_MANAGER', 'HR_MANAGER', 'IT_SPECIALIST')")
     public ResponseEntity<EntityData> cancelShift(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal caller) {
