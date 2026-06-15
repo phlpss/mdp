@@ -112,6 +112,16 @@ public interface EntityDataRepository extends JpaRepository<EntityData, UUID> {
             Pageable pageable);
 
     @Query(value = """
+        SELECT COUNT(*) FROM entity_data
+        WHERE type = :type
+          AND (payload ->> :quantityField)::numeric <= (payload ->> :reorderField)::numeric
+        """, nativeQuery = true)
+    int countWhereQuantityAtOrBelowReorder(
+            @Param("type")          String type,
+            @Param("quantityField") String quantityField,
+            @Param("reorderField")  String reorderField);
+
+    @Query(value = """
         SELECT * FROM entity_data
         WHERE type = :type
           AND payload @> CAST(:filterJson AS jsonb)
@@ -127,4 +137,3 @@ public interface EntityDataRepository extends JpaRepository<EntityData, UUID> {
             @Param("filterJson") String filterJson,
             Pageable pageable);
 }
-

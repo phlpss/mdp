@@ -19,7 +19,8 @@ public record MetaAttribute(
         String placeholder,
         String hint,
         int order,
-        String group
+        String group,
+        String referenceType
 ) {
 }
 

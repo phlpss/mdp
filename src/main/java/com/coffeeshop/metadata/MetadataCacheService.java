@@ -105,7 +105,8 @@ public class MetadataCacheService {
                            placeholder:   ma.placeholder,
                            hint:          ma.hint,
                            order:         ma.order,
-                           group:         ma.group
+                           group:         ma.group,
+                           referenceType: ma.referenceType
                        }) AS attributes
                 """;
 
@@ -137,7 +138,8 @@ public class MetadataCacheService {
                             (String) a.get("placeholder"),
                             (String) a.get("hint"),
                             toInteger(a.get("order")) != null ? toInteger(a.get("order")) : 99,
-                            (String) a.get("group")))
+                            (String) a.get("group"),
+                            (String) a.get("referenceType")))
                     .toList();
 
             typeCache.put(typeName, new MetaType(typeName, attributes, sensitiveFields));

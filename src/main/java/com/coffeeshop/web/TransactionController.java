@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
+import java.time.temporal.ChronoUnit;
 
 import java.time.Instant;
 
@@ -53,7 +54,7 @@ public class TransactionController {
                 body.path("amount").asDouble(), body.path("paymentMethod").asString(), caller.getUsername());
 
         String receiptNumber = "R-" + System.currentTimeMillis();
-        String timestamp = Instant.now().toString();
+        String timestamp = Instant.now().truncatedTo(ChronoUnit.MILLIS).toString();
 
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("receiptNumber", receiptNumber);
@@ -61,6 +62,7 @@ public class TransactionController {
         payload.put("paymentMethod", body.path("paymentMethod").asString("CASH"));
         payload.put("notes",         body.path("notes").asString(""));
         payload.put("cashierId",     caller.getUserId().toString());
+        payload.put("createdAt",     timestamp);
         payload.put("timestamp",     timestamp);
 
         EntityData saved = genericEntityService.create(TRANSACTION_TYPE, payload, caller);

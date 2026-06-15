@@ -181,7 +181,8 @@ public class MetaController {
                 body.path("placeholder").isNull() || body.path("placeholder").isMissingNode() ? null : body.path("placeholder").asString(),
                 body.path("hint").isNull() || body.path("hint").isMissingNode() ? null : body.path("hint").asString(),
                 body.path("order").isNull() || body.path("order").isMissingNode() ? 99 : body.path("order").asInt(),
-                body.path("group").isNull() || body.path("group").isMissingNode() ? null : body.path("group").asString()
+                body.path("group").isNull() || body.path("group").isMissingNode() ? null : body.path("group").asString(),
+                body.path("referenceType").isNull() || body.path("referenceType").isMissingNode() ? null : body.path("referenceType").asString()
         );
     }
 

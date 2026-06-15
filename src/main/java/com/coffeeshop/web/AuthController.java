@@ -164,11 +164,12 @@ public class AuthController {
         }
 
         ObjectNode response = objectMapper.createObjectNode();
-        response.put("id",        caller.getUserId().toString());
-        response.put("username",  caller.getUsername());
-        response.put("email",     caller.getUsername() + "@coffeeshop.local");
-        response.put("fullName",  fullName);
-        response.put("isActive",  true);
+        response.put("id",         caller.getUserId().toString());
+        response.put("employeeId", caller.getUserId().toString());
+        response.put("username",   caller.getUsername());
+        response.put("email",      caller.getUsername() + "@coffeeshop.local");
+        response.put("fullName",   fullName);
+        response.put("isActive",   true);
         if (caller.getStoreLocationId() != null) {
             response.put("locationId", caller.getStoreLocationId().toString());
         } else {

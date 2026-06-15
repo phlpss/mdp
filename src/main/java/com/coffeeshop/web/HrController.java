@@ -88,7 +88,7 @@ public class HrController {
         userPayload.put("isActive", true);
         userPayload.put("employeeId", employee.getId().toString());
         userPayload.putArray("roles").add(role.toUpperCase());
-        String locId = employeePayload.path("storeLocationId").asString(null);
+        String locId = employeePayload.path("locationId").asString(null);
         if (locId != null) userPayload.put("storeLocationId", locId);
 
         entityService.create("User", userPayload, caller);

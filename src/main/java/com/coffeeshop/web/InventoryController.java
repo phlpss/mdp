@@ -1,5 +1,6 @@
 package com.coffeeshop.web;
 
+import com.coffeeshop.operational.EntityDataRepository;
 import com.coffeeshop.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,27 +13,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/**
- * Inventory-related endpoints.
- *
- * Thin endpoints on top of the generic InventoryItem EntityData.
- * TODO: implement by querying InventoryItem EntityData where quantity <= reorderLevel.
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/inventory")
 @RequiredArgsConstructor
 public class InventoryController {
 
+    private final EntityDataRepository entityDataRepository;
+
     /**
      * GET /api/v1/inventory/low-stock-count
-     * Returns the count of InventoryItem records where quantity is at or below reorderLevel.
+     * Returns the count of InventoryItem records where payload.quantity <= payload.reorderLevel.
      */
     @GetMapping("/low-stock-count")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Integer>> getLowStockCount(@AuthenticationPrincipal UserPrincipal caller) {
         log.info("GET /inventory/low-stock-count - requester={}", caller.getUsername());
-        // TODO: query InventoryItem EntityData where payload.quantity <= payload.reorderLevel
-        return ResponseEntity.ok(Map.of("count", 0));
+        int count = entityDataRepository.countWhereQuantityAtOrBelowReorder("InventoryItem", "quantity", "reorderLevel");
+        return ResponseEntity.ok(Map.of("count", count));
     }
 }

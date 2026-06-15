@@ -16,6 +16,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.coffeeshop.operational.EntityData;
+import com.coffeeshop.operational.GenericEntityService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import tools.jackson.databind.node.ArrayNode;
+import java.util.Map;
 
 /**
  * Finance module controller for accounting, payroll, and reporting operations.
@@ -31,11 +37,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/finance")
 public class FinanceController {
     private final ObjectMapper objectMapper;
+    private final GenericEntityService genericEntityService;
 
-    public FinanceController(ObjectMapper objectMapper) {
+    public FinanceController(ObjectMapper objectMapper, GenericEntityService genericEntityService) {
         this.objectMapper = objectMapper;
+        this.genericEntityService = genericEntityService;
     }
-
     /**
      * Generate a daily closing report with reconciliation.
      *
@@ -58,41 +65,70 @@ public class FinanceController {
     public ResponseEntity<Object> createClosingReport(
             @RequestBody JsonNode body,
             @AuthenticationPrincipal UserPrincipal caller) {
-
-        String storeLocationId = body.get("storeLocationId").asString();
-        String date = body.get("date").asString();
-        double actualTotal = body.get("actualTotal").asDouble();
+        String storeLocationId = body.path("storeLocationId").asString(null);
+        String date = body.path("date").asString(null);
+        double actualTotal = body.path("actualTotal").asDouble();
 
         log.info("Closing report: store={}, date={}, actualTotal={}, submittedBy={}",
                 storeLocationId, date, actualTotal, caller.getUsername());
 
-        // TODO UC-FIN1: Daily closing reconciliation
-        // 1. Parse date and validate it's not a future date
-        // 2. Query all Transaction EntityData with filters:
-        //    - storeLocationId matches
-        //    - transactionDate == date
-        //    - status == COMPLETED
-        // 3. Sum the transactionAmount field across all transactions
-        //    calculatedTotal = SUM(transaction.transactionAmount)
-        // 4. Calculate discrepancy:
-        //    discrepancy = actualTotal - calculatedTotal
-        // 5. Create DailyClosingReport EntityData with fields:
-        //    - storeLocationId
-        //    - date
-        //    - calculatedTotal
-        //    - actualTotal
-        //    - discrepancy
-        //    - submittedBy (from caller.getUserId())
-        //    - status = "PENDING" (awaiting manager approval)
-        // 6. Persist to entity_data table
-        // 7. If ABS(discrepancy) > THRESHOLD (e.g., 100.0):
-        //    a. Publish DISCREPANCY_DETECTED event to Pub/Sub with:
-        //       - report ID, store, date, discrepancy amount
-        //       - severity: "CRITICAL" if > 500, "WARNING" if 100-500
-        //    b. For UC-AI2 anomaly detector to investigate
-        // 8. Return created report with 201 status
+        // 1. Validate the date is not in the future
+        if (date != null && !date.isBlank()) {
+            try {
+                if (java.time.LocalDate.parse(date).isAfter(java.time.LocalDate.now())) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error", "VALIDATION_ERROR", "message", "date cannot be in the future"));
+                }
+            } catch (java.time.format.DateTimeParseException e) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "VALIDATION_ERROR", "message", "invalid date: " + date));
+            }
+        }
 
-        return new ResponseEntity<>(HttpStatus.CREATED);
+        // 2-3. Sum Transaction amounts for the given date
+        double calculatedTotal = 0.0;
+        Page<EntityData> txns = genericEntityService.findAll(
+                "Transaction", PageRequest.of(0, 10_000), caller);
+        for (EntityData tx : txns.getContent()) {
+            var p = tx.getPayload();
+            if (date != null && !date.isBlank()
+                    && !p.path("timestamp").asString("").startsWith(date)) {
+                continue;
+            }
+            calculatedTotal += p.path("amount").asDouble(0);
+        }
+        calculatedTotal = Math.round(calculatedTotal * 100.0) / 100.0;
+
+        // 4. Discrepancy
+        double discrepancy = Math.round((actualTotal - calculatedTotal) * 100.0) / 100.0;
+        double absDiscrepancy = Math.abs(discrepancy);
+        String severity = absDiscrepancy > 500 ? "CRITICAL"
+                : absDiscrepancy > 100 ? "WARNING" : "NORMAL";
+
+        // 5-6. Persist the DailyClosingReport
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("storeLocationId", storeLocationId);
+        payload.put("date", date);
+        payload.put("calculatedTotal", calculatedTotal);
+        payload.put("actualTotal", actualTotal);
+        payload.put("discrepancy", discrepancy);
+        payload.put("severity", severity);
+        payload.put("submittedBy", caller.getUserId().toString());
+        payload.put("status", "PENDING");
+
+        EntityData saved = genericEntityService.create("DailyClosingReport", payload, caller);
+
+        // 7. Anomaly signal for UC-AI2 (no Pub/Sub infra here — log it)
+        if (absDiscrepancy > 100) {
+            log.warn("DISCREPANCY_DETECTED report={} store={} date={} discrepancy={} severity={}",
+                    saved.getId(), storeLocationId, date, discrepancy, severity);
+        }
+
+        // 8. Return the created report
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("id", saved.getId().toString());
+        response.setAll((ObjectNode) saved.getPayload());
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     /**
@@ -316,9 +352,28 @@ public class FinanceController {
             @AuthenticationPrincipal UserPrincipal caller) {
 
         log.info("GET /finance/transactions - store={}, date={}, requester={}", storeLocationId, date, caller.getUsername());
+
+        Page<EntityData> txns = genericEntityService.findAll(
+                "Transaction", PageRequest.of(0, Math.max(1, size)), caller);
+
         ObjectNode response = objectMapper.createObjectNode();
-        response.putArray("content");
-        response.put("totalElements", 0);
+        ArrayNode content = response.putArray("content");
+        int count = 0;
+        for (EntityData tx : txns.getContent()) {
+            var p = tx.getPayload();
+            String ts = p.path("timestamp").asString(p.path("createdAt").asString(""));
+            if (date != null && !date.isBlank() && !ts.contains(date)) {
+                continue;
+            }
+            ObjectNode item = content.addObject();
+            item.put("id", tx.getId().toString());
+            item.put("receiptNumber", p.path("receiptNumber").asString(""));
+            item.put("totalAmount", p.path("amount").asDouble(0));   // component reads totalAmount
+            item.put("paymentMethod", p.path("paymentMethod").asString(""));
+            item.put("timestamp", p.path("timestamp").asString(""));
+            count++;
+        }
+        response.put("totalElements", count);
         return ResponseEntity.ok(response);
     }
 
