@@ -17,7 +17,7 @@ spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/coffeeshop}
     username: ${DATABASE_USER:postgres}
-    password: ${DATABASE_PASSWORD:pass}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -38,11 +38,11 @@ spring:
     uri: ${NEO4J_URI:neo4j+s://a7590ddd.databases.neo4j.io}
     authentication:
       username: ${NEO4J_USER:a7590ddd}
-      password: ${NEO4J_PASSWORD:ObTDT4noae8Jyi-6rnZN7mo8utB4hT3xywFChhKS5Js}
+      password: ${NEO4J_PASSWORD}
 
 coffeeshop:
   jwt:
-    secret: ${JWT_SECRET:your-super-secret-key-change-in-production-at-least-32-characters-long}
+    secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}  # 24 hours
   
   pubsub:
